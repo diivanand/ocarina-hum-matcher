@@ -80,7 +80,8 @@ class LiveView:
         sys.stdout.flush()
 
 
-def _report(analysis: Analysis, ranking: Sequence[SongMatch], tolerance: float) -> SongMatch | None:
+def _report(analysis: Analysis, ranking: Sequence[SongMatch], tolerance: float) -> bool:
+    """Print what was heard and the closest songs; return whether the best one matched."""
     names = " ".join(note_name(m) for m in analysis.midi_notes) or "none"
     tuning = f"tuning {round(analysis.detune * 100) or 0:+d} cents"
     print(f"Detected {len(analysis.notes)} notes: {names}   ({tuning})")
@@ -89,7 +90,7 @@ def _report(analysis: Analysis, ranking: Sequence[SongMatch], tolerance: float) 
             "Too few notes: the songs have 5 to 8. Hum a bit louder and slower, "
             "with a short gap between repeated notes."
         )
-        return None
+        return False
     best = ranking[0]
     matched = best.error <= tolerance
     if matched:
@@ -102,11 +103,12 @@ def _report(analysis: Analysis, ranking: Sequence[SongMatch], tolerance: float) 
     print("\nClosest songs:")
     for m in ranking[:3]:
         print(f"  {m.name:<20} {m.error:5.2f}{'  <- match' if matched and m is best else ''}")
-    return best if matched else None
+    return matched
 
 
-def _play_song(name: str) -> None:
-    print(f"Playing {name} on the ocarina...")
+def _play_song(name: str, closest: bool = False) -> None:
+    what = f"the closest song, {name}," if closest else name
+    print(f"Playing {what} on the ocarina...")
     try:
         play(render(OCARINA_SONGS[name]), SAMPLE_RATE)
     except AudioUnavailableError as error:
@@ -119,7 +121,7 @@ def _finish(
     rate: int,
     analysis: Analysis,
     ranking: Sequence[SongMatch],
-    match: SongMatch | None,
+    matched: bool,
 ) -> int:
     if getattr(args, "save", None):
         write_wav(args.save, signal, rate)
@@ -130,11 +132,12 @@ def _finish(
         if args.plot:
             save_report(args.plot, signal, rate, analysis, ranking, tolerance=args.tolerance)
             print(f"Saved the report to {args.plot}")
-    if match and args.play:
-        _play_song(match.name)
+    # Even without a match, play the closest song so you hear what you were near.
+    if ranking and args.play:
+        _play_song(ranking[0].name, closest=not matched)
     if args.show:
         show_report(signal, rate, analysis, ranking, tolerance=args.tolerance)
-    return 0 if match else 1
+    return 0 if matched else 1
 
 
 def cmd_listen(args: argparse.Namespace) -> int:
@@ -273,7 +276,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--play",
         action=argparse.BooleanOptionalAction,
         default=True,
-        help="play the matched song back (default: on)",
+        help="play the matched (or else closest) song back (default: on)",
     )
     p.set_defaults(func=cmd_listen)
 
@@ -283,7 +286,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--play",
         action=argparse.BooleanOptionalAction,
         default=False,
-        help="play the matched song (default: off)",
+        help="play the matched (or else closest) song (default: off)",
     )
     p.set_defaults(func=cmd_identify)
 

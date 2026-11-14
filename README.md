@@ -41,7 +41,7 @@ To install `ocarina` as a command you can run anywhere: `uv tool install .`
 
 | Command | What it does |
 | --- | --- |
-| `ocarina listen` | Records from the mic with a live level and pitch meter. Stops when a song matches (`--full` keeps recording) and plays it back (`--no-play` skips that). Options: `--seconds 12`, `--device N`, `--save rec.wav`, `--plot report.png`, `--show`, `--tolerance 0.5`. |
+| `ocarina listen` | Records from the mic with a live level and pitch meter. Stops when a song matches (`--full` keeps recording) and plays it back; with no match it plays the closest song instead (`--no-play` skips playback). Options: `--seconds 12`, `--device N`, `--save rec.wav`, `--plot report.png`, `--show`, `--tolerance 0.5`. |
 | `ocarina identify FILE.wav` | The same analysis for a WAV file. Options: `--play`, `--plot`, `--show`, `--tolerance`. |
 | `ocarina play SONG` | Plays a song on a synthesized ocarina; `--save out.wav` writes it instead. Fragments work: `storms`, `zelda`, `bolero`. |
 | `ocarina songs` | Lists the songs and their notes. |

@@ -135,6 +135,19 @@ class TestCommandLine(unittest.TestCase):
         self.assertLess(time.monotonic() - started, 6, "should stop as soon as the song matches")
         self.assertEqual(len(fake.played), 1)
 
+    def test_listen_plays_closest_song_when_nothing_matches(self) -> None:
+        rate = 48_000
+        hum = render(
+            OCARINA_SONGS["Song of Storms"], timbre="hum", transpose=-11.4, sample_rate=rate
+        )
+        fake = FakeSoundDevice(0.3 * hum, rate, speed=8.0)
+        with mock.patch("ocarina_hum_matcher.audio._sounddevice", return_value=fake):
+            code, out, _ = run("listen", "--seconds", "4", "--tolerance", "-1")
+        self.assertEqual(code, 1)
+        self.assertIn("No match", out)
+        self.assertIn("Playing the closest song, Song of Storms,", out)
+        self.assertEqual(len(fake.played), 1)
+
     def test_listen_explains_missing_portaudio(self) -> None:
         error = AudioUnavailableError("Audio needs the PortAudio library.")
         with mock.patch("ocarina_hum_matcher.audio._sounddevice", side_effect=error):
