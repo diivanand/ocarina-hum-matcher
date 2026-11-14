@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+*.egg-info/
+*.egg
+build/
+dist/
+wheels/
+
+# Virtual environments (uv.lock and .python-version stay tracked)
+.venv/
+venv/
+env/
+.env
+
+# Tool caches
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+
+# Editors and OS
+.idea/
+.vscode/
+*.swp
+*~
+.DS_Store
+Thumbs.db
+
+# Claude Code: per-user local settings
+.claude/settings.local.json
+
+# Audio and reports made by `ocarina synth`, `listen --save` and `--plot`.
+# Keep the bundled example and the README screenshot.
+*.wav
+!examples/*.wav
+*.png
+!docs/*.png

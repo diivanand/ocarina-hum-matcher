@@ -1,0 +1,2367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hearing Zelda's Lullaby</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script>
+window.MathJax = {
+  tex: { inlineMath: [["\\(", "\\)"]], displayMath: [["\\[", "\\]"]] },
+  svg: { fontCache: "global" }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-svg.js" defer></script>
+<style>
+:root {
+  /* One visual world: a night-blue stage, gold for the signal, sky blue for the reference. */
+  /* Layout: each slide fills the stage; explanation left, live widget right; stacked under 900px. */
+  --bg: #0d1524;
+  --panel: #142035;
+  --raise: #1d2c47;
+  --code-bg: #0a111e;
+  --line: #2c3e5e;
+  --grid: rgba(156, 173, 198, 0.15);
+  --text: #e8eef8;
+  --muted: #9cadc6;
+  --gold: #f3b443;
+  --gold-soft: rgba(243, 180, 67, 0.2);
+  --sky: #63c7ff;
+  --sky-soft: rgba(99, 199, 255, 0.1);
+  --good: #63d69e;
+  --bad: #ff8080;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", monospace;
+  color-scheme: dark;
+}
+*, *::before, *::after { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font: 400 16.5px/1.5 var(--font-body);
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto auto;
+  overflow: hidden;
+}
+.deck { position: relative; overflow: hidden; }
+.slide {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: clamp(16px, 3vw, 40px) clamp(16px, 5vw, 72px) clamp(20px, 3.5vw, 44px);
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 0.25s ease, visibility 0.25s;
+}
+.slide.active { visibility: visible; opacity: 1; }
+@media (prefers-reduced-motion: reduce) { .slide { transition: none; } }
+.inner {
+  margin-block: auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+  gap: clamp(20px, 3.2vw, 48px);
+  align-items: center;
+  width: 100%;
+  max-width: 1360px;
+  margin-inline: auto;
+}
+.inner.single { grid-template-columns: minmax(0, 1fr); max-width: 1120px; }
+@media (max-width: 900px) { .inner { grid-template-columns: minmax(0, 1fr); align-items: start; } }
+
+h1, h2 { font-family: var(--font-display); text-wrap: balance; margin: 0; }
+h1 { font-weight: 800; font-size: clamp(34px, 5.2vw, 64px); line-height: 1.04; letter-spacing: -0.02em; }
+h2 { font-weight: 800; font-size: clamp(24px, 2.8vw, 37px); line-height: 1.1; letter-spacing: -0.01em; }
+.eyebrow {
+  font: 500 12px/1 var(--font-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin: 0 0 12px;
+}
+.demo .eyebrow { color: var(--sky); }
+.text { display: grid; gap: 12px; min-width: 0; }
+/* One shrinkable column, so long code lines scroll inside their box instead of widening the slide */
+.text, .panel, .tryit, .try, .stages, .agenda { grid-template-columns: minmax(0, 1fr); }
+.text p, .text li { max-width: 64ch; margin: 0; }
+.byline { font: 600 clamp(17px, 1.5vw, 20px) var(--font-body); color: var(--text); margin-top: 6px !important; }
+.lede { font-size: clamp(17px, 1.5vw, 20px); color: var(--muted); }
+.points { margin: 0; padding-left: 1.1em; display: grid; gap: 8px; }
+.points li::marker { color: var(--gold); }
+.demo .points li::marker { color: var(--sky); }
+.math { overflow-x: auto; overflow-y: hidden; margin: 0; }
+mjx-container[display="true"] { margin: 0.25em 0 !important; }
+.muted { color: var(--muted); }
+code { font: 500 0.88em var(--font-mono); color: var(--gold); }
+b { font-weight: 600; }
+
+/* "In the code" snippets: the real lines, with the file and function they come from */
+.code {
+  margin: 0; background: var(--code-bg); border: 1px solid var(--line); border-left: 3px solid var(--gold);
+  border-radius: 8px; padding: 8px 12px 10px; overflow-x: auto; min-width: 0;
+}
+.code figcaption { font: 500 11px/1.4 var(--font-mono); color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 4px; }
+.code pre { margin: 0; font: 400 12.5px/1.55 var(--font-mono); color: var(--text); white-space: pre; }
+.code .c { color: var(--muted); }
+
+/* "You are here" strip on every teaching slide */
+.where { list-style: none; margin: 0 auto; padding: 0; display: flex; flex-wrap: wrap; gap: 4px; align-items: center; width: 100%; max-width: 1360px; }
+.where li { display: flex; align-items: center; gap: 4px; }
+.where li + li::before { content: "→"; color: var(--line); font-size: 12px; }
+.where button {
+  font: 500 11px/1 var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase;
+  background: transparent; color: var(--muted); border: 1px solid transparent; border-radius: 999px;
+  padding: 5px 10px; cursor: pointer;
+}
+.where .done button { color: var(--text); }
+.where [aria-current="step"] { color: var(--bg); background: var(--gold); }
+.where button:hover { border-color: var(--gold); }
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px;
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  margin: 0;
+}
+canvas { display: block; width: 100%; }
+.cap { font-size: 13px; color: var(--muted); margin: 0; }
+.pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+.pair > div { display: grid; gap: 4px; min-width: 0; }
+@media (max-width: 560px) { .pair { grid-template-columns: minmax(0, 1fr); } }
+
+.controls { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; }
+.ctl { display: grid; grid-template-columns: auto minmax(90px, 1fr) auto; align-items: center; gap: 10px; flex: 1 1 200px; }
+.ctl label { font: 500 13px var(--font-mono); color: var(--muted); white-space: nowrap; }
+.ctl output { font: 500 13px var(--font-mono); min-width: 6.5ch; text-align: right; font-variant-numeric: tabular-nums; }
+input[type="range"] { width: 100%; accent-color: var(--gold); }
+select {
+  background: var(--raise); color: var(--text); border: 1px solid var(--line);
+  border-radius: 8px; padding: 7px 10px; font: 500 14px var(--font-body);
+}
+.seg { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--line); border-radius: 999px; padding: 3px; gap: 2px; }
+.seg button, .btn, .tog {
+  border: 0; background: transparent; color: var(--muted); cursor: pointer;
+  font: 500 13.5px var(--font-body); padding: 6px 13px; border-radius: 999px;
+}
+.seg button[aria-pressed="true"], .tog[aria-pressed="true"] { background: var(--raise); color: var(--text); box-shadow: inset 0 0 0 1px var(--gold); }
+.tog { border: 1px solid var(--line); font-family: var(--font-mono); font-size: 13px; }
+.btn { border: 1px solid var(--gold); color: var(--gold); }
+.btn:hover, .seg button:hover, .tog:hover { color: var(--text); }
+.btn:disabled { opacity: 0.45; cursor: default; color: var(--gold); }
+.btn.rec { border-color: var(--bad); color: var(--bad); }
+:focus-visible { outline: 2px solid var(--sky); outline-offset: 2px; }
+.readout { font: 500 13px/1.6 var(--font-mono); color: var(--muted); font-variant-numeric: tabular-nums; margin: 0; }
+.readout b { color: var(--text); font-weight: 500; }
+.good { color: var(--good) !important; }
+.bad { color: var(--bad) !important; }
+.key { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; vertical-align: 0; }
+
+.stages { list-style: none; padding: 0; margin: 4px 0 0; display: grid; gap: 6px; }
+.stages button {
+  width: 100%; display: grid; grid-template-columns: 1.6em 6.5em minmax(0, 1fr) auto; gap: 10px; align-items: baseline; text-align: left;
+  background: var(--raise); border: 1px solid var(--line); color: var(--text); cursor: pointer;
+  border-radius: 10px; padding: 9px 12px; font: 400 15px var(--font-body);
+}
+.stages button:hover { border-color: var(--gold); }
+.stages .n { font: 500 12px var(--font-mono); color: var(--gold); }
+.stages b { font: 800 17px var(--font-display); }
+.stages span { color: var(--muted); }
+.stages i { font: 500 11px var(--font-mono); color: var(--gold); font-style: normal; }
+
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chips span { font: 500 13px var(--font-mono); background: var(--raise); border-radius: 6px; padding: 3px 8px; }
+.verdict { font: 600 16px var(--font-body); margin: 0; }
+
+.ideas { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+@media (max-width: 900px) { .ideas { grid-template-columns: minmax(0, 1fr); } }
+.idea { background: var(--panel); border: 1px solid var(--line); border-top: 3px solid var(--gold); border-radius: 12px; padding: 16px; display: grid; gap: 6px; align-content: start; }
+.idea b { font: 800 21px var(--font-display); }
+.idea .n { font: 500 12px var(--font-mono); color: var(--gold); }
+.idea p { margin: 0; color: var(--muted); }
+
+.trail { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
+@media (max-width: 900px) { .trail { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.trail li { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; display: grid; gap: 4px; align-content: start; }
+.trail .n { font: 500 11px var(--font-mono); color: var(--gold); text-transform: uppercase; letter-spacing: 0.08em; }
+.trail b { font: 500 15px var(--font-mono); }
+.trail span { font-size: 13px; color: var(--muted); }
+
+/* Code map */
+.flow { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; counter-reset: step; }
+.flow li { counter-increment: step; display: grid; grid-template-columns: 1.8em minmax(0, 1fr); gap: 8px; align-items: start; }
+.flow li::before { content: counter(step); font: 500 12px/1.9 var(--font-mono); color: var(--bg); background: var(--gold); border-radius: 50%; width: 1.8em; height: 1.8em; text-align: center; }
+.flow p { margin: 0; }
+.flow .sub { display: block; font: 400 12.5px/1.6 var(--font-mono); color: var(--muted); margin-top: 2px; }
+.files { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 560px) { .files { grid-template-columns: minmax(0, 1fr); } }
+.file { background: var(--raise); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; display: grid; gap: 4px; align-content: start; }
+.file b { font: 500 14px var(--font-mono); color: var(--gold); }
+.file span { font-size: 13.5px; color: var(--muted); }
+.file.core { border-color: var(--gold); }
+.go {
+  font: 500 11px var(--font-mono); color: var(--gold); background: transparent; border: 1px solid var(--line);
+  border-radius: 999px; padding: 1px 8px; cursor: pointer; white-space: nowrap; vertical-align: 1px;
+}
+.go:hover { border-color: var(--gold); }
+
+/* Demo runbook */
+.cmd { position: relative; background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px; padding: 12px 76px 12px 14px; min-width: 0; }
+.cmd code { display: block; font: 500 clamp(14px, 1.25vw, 17px)/1.5 var(--font-mono); color: var(--text); white-space: pre-wrap; word-break: break-word; }
+.cmd code::before { content: "$ "; color: var(--sky); }
+.cmd .c { color: var(--muted); }
+.copy {
+  position: absolute; top: 9px; right: 9px; font: 500 12px var(--font-mono); color: var(--sky);
+  background: var(--raise); border: 1px solid var(--line); border-radius: 6px; padding: 4px 9px; cursor: pointer;
+}
+.copy:hover { border-color: var(--sky); }
+.out { margin: 0; background: transparent; border: 1px dashed var(--line); border-radius: 10px; padding: 10px 14px; font: 400 12.5px/1.55 var(--font-mono); color: var(--muted); white-space: pre-wrap; overflow-x: auto; }
+.out b { color: var(--good); font-weight: 500; }
+.lbl { font: 500 11px var(--font-mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin: 4px 0 -4px; }
+.tryit { display: grid; gap: 10px; }
+.try { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; display: grid; gap: 8px; }
+.try h3 { margin: 0; font: 600 16px var(--font-body); }
+.try p { margin: 0; color: var(--muted); font-size: 14.5px; }
+.grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 900px) { .grid2 { grid-template-columns: minmax(0, 1fr); } }
+.agenda { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.agenda button {
+  width: 100%; display: grid; grid-template-columns: 4em minmax(0, 1fr) auto; gap: 10px; align-items: baseline; text-align: left;
+  background: var(--panel); border: 1px solid var(--line); color: var(--text); border-radius: 10px; padding: 10px 14px; cursor: pointer; font: 400 15.5px var(--font-body);
+}
+.agenda button:hover { border-color: var(--sky); }
+.agenda .t { font: 500 12px var(--font-mono); color: var(--sky); }
+.agenda span { color: var(--muted); }
+
+/* Definitions: every term is defined where it first appears */
+.terms {
+  margin: 0; display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 6px 14px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; font-size: 15px;
+}
+.terms dt { font-weight: 600; color: var(--gold); white-space: nowrap; }
+.terms dd { margin: 0; }
+@media (max-width: 560px) { .terms { grid-template-columns: minmax(0, 1fr); gap: 2px; } .terms dd { margin-bottom: 6px; } }
+.gloss { margin: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+@media (max-width: 1100px) { .gloss { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 640px) { .gloss { grid-template-columns: minmax(0, 1fr); } }
+.gloss div { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; }
+.gloss dt { font-weight: 600; display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.gloss dd { margin: 2px 0 0; color: var(--muted); font-size: 14px; }
+
+/* Comparison table */
+.table-wrap { overflow-x: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; }
+table.cmp { width: 100%; border-collapse: collapse; font-size: 14.5px; min-width: 760px; }
+.cmp th, .cmp td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.cmp th { font: 600 15px var(--font-body); }
+.cmp th span { font: 500 11px var(--font-mono); color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+.cmp th:last-child, .cmp td:last-child { background: var(--gold-soft); }
+.cmp td:first-child { font: 500 12px var(--font-mono); color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; white-space: nowrap; }
+.cmp tr:last-child td { border-bottom: 0; }
+
+.notes-box {
+  background: var(--raise); border-top: 1px solid var(--line);
+  padding: 10px clamp(16px, 5vw, 72px); font-size: 15px; color: var(--text); margin: 0;
+  max-height: 30vh; overflow-y: auto;
+}
+.bar {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px clamp(12px, 3vw, 28px);
+  border-top: 1px solid var(--line); background: var(--panel);
+  font: 500 13px var(--font-mono); color: var(--muted);
+}
+.bar button {
+  background: transparent; border: 1px solid var(--line); color: var(--text); border-radius: 8px;
+  padding: 6px 12px; cursor: pointer; font: 500 13px var(--font-mono);
+}
+.bar button:hover { border-color: var(--gold); }
+.progress { flex: 1; height: 4px; background: var(--line); border-radius: 2px; overflow: hidden; min-width: 40px; }
+.progress i { display: block; height: 100%; width: 0; background: var(--gold); transition: width 0.25s; }
+#timer { font-variant-numeric: tabular-nums; }
+#timer.behind { color: var(--gold); border-color: var(--gold); }
+#timer.paused { color: var(--muted); }
+.bar > * { white-space: nowrap; }
+@media (max-width: 560px) { .bar { gap: 6px; } .bar button { padding: 6px 9px; } .progress { min-width: 0; } }
+@media (max-width: 560px) { .hide-sm { display: none; } .math { font-size: 13.5px; } .code pre { font-size: 11.5px; } }
+</style>
+</head>
+<body>
+<main class="deck" id="deck" aria-live="polite">
+
+<!-- ======================= PART 1: THE TALK (20:00) ======================= -->
+
+<!-- 1 -->
+<section class="slide active" data-part="talk" data-budget="40" data-notes="In Ocarina of Time you play songs on a five-note ocarina, and the Switch 2 remake lets you hum them into the microphone instead. In the next 20 minutes we rebuild that recognizer from scratch, the way the ocarina tool in this repo does it in about 300 lines of NumPy, and then we spend 10 minutes running it live. I'll assume linear algebra and nothing about signal processing. Press play: six notes, five possible pitches.">
+  <div class="inner">
+    <div class="text">
+      <p class="eyebrow">Ocarina of Time · hum to play · 20 min talk + 10 min live demo</p>
+      <h1>Hum a song, and the computer names it</h1>
+      <p class="lede">How the <code>ocarina</code> tool turns a few seconds of humming into one of 12 song names. There's no machine learning and no training data, just dot products, a change of basis, a matrix factorization and a distance.</p>
+      <p class="muted">You need basic linear algebra. Everything about sound, we'll build from scratch.</p>
+      <p class="byline">Diivanand Ramalingam</p>
+    </div>
+    <figure class="panel">
+      <canvas id="staff" style="height:230px" aria-label="Zelda's Lullaby on the ocarina's five-note staff"></canvas>
+      <div class="controls">
+        <button class="btn" id="play-lullaby" type="button">▶ Play Zelda's Lullaby</button>
+        <p class="cap">The ocarina has five notes: D4, F4, A4, B4 and D5. Every song is a sequence of 5 to 8 of them.</p>
+      </div>
+    </figure>
+  </div>
+</section>
+
+<!-- 2 -->
+<section class="slide" data-part="talk" data-budget="50" data-notes="Here's the whole problem. The mic gives us an array of floats, 44,100 a second. Nowhere in that array is the word D4: pitch is a pattern in the numbers, not a value. We also can't care about key, because nobody hums at the ocarina's pitch. The algorithm is five stages, and the strip at the top of every slide shows which one we're in.">
+  <div class="inner">
+    <div class="text">
+      <p class="eyebrow">The problem</p>
+      <h2>In: 44,100 numbers a second. Out: one of 12 names.</h2>
+      <ul class="points">
+      </ul>
+      <dl class="terms">
+        <dt>Signal</dt><dd>A quantity that changes over time. Here it's air pressure at the microphone.</dd>
+        <dt>Sample</dt><dd>One measurement of the signal: a single float.</dd>
+        <dt>Sample rate \(f_s\)</dt><dd>Samples per second. Ours is 44,100, so three seconds of humming is an array of about 130,000 floats, and that's all we get.</dd>
+      </dl>
+      <ul class="points">
+        <li>No entry says "D4". The pitch is in <i>how the numbers repeat</i>, so we have to compute it.</li>
+        <li>People hum low, high, sharp or flat, so the answer must not depend on key.</li>
+      </ul>
+      <ol class="stages" aria-label="The five stages, each links to its slides">
+        <li><button type="button" data-go="5"><span class="n">1</span><b>Frames</b><span>cut the array into 40 ms vectors</span><i>5</i></button></li>
+        <li><button type="button" data-go="6"><span class="n">2</span><b>Spectrum</b><span>how much of each frequency is in a frame</span><i>6–12</i></button></li>
+        <li><button type="button" data-go="13"><span class="n">3</span><b>Pitch</b><span>which frequency is the note</span><i>13–14</i></button></li>
+        <li><button type="button" data-go="15"><span class="n">4</span><b>Notes</b><span>100 pitches a second become a few notes</span><i>15</i></button></li>
+        <li><button type="button" data-go="16"><span class="n">5</span><b>Song</b><span>the nearest of 12 songs, in any key</span><i>16</i></button></li>
+      </ol>
+    </div>
+    <figure class="panel">
+      <canvas id="raw" style="height:220px" aria-label="Waveform of a hummed Zelda's Lullaby"></canvas>
+      <div class="controls">
+        <button class="btn" id="play-raw" type="button">▶ Hear it</button>
+        <p class="cap">A synthesized hum of Zelda's Lullaby, an octave below the ocarina. Each blob is a note; the gaps are breaths.</p>
+      </div>
+      <p class="readout" id="raw-out"></p>
+    </figure>
+  </div>
+</section>
+
+<!-- 3 -->
+<section class="slide" data-part="talk" data-budget="75" data-stage="0" data-notes="Two facts about sound are all we need. One: pitch is how often the wave repeats, and it's multiplicative, so an octave doubles it and a semitone multiplies by about 1.06. Two: a voice is a sum of sines at whole multiples of the fundamental, called harmonics. Toggle them: the shape changes but the repeat length doesn't. Now turn off 1x and leave 2x and 3x on: there's no f0 component at all, yet the pattern still repeats every 1/f0, and you still hear the same note. Turn on only 2x: now it really is an octave higher. That's the octave error we must avoid on slide 13.">
+  <div class="inner">
+    <div class="text">
+      <p class="eyebrow">Sound · from scratch</p>
+      <h2>Pitch is how often the waveform repeats</h2>
+      <dl class="terms">
+        <dt>Period \(T\)</dt><dd>How long a repeating pattern takes to repeat once.</dd>
+        <dt>Frequency \(f\)</dt><dd>Repeats per second, \(f = 1/T\), measured in hertz (Hz). For a sinusoid, its cycles per second.</dd>
+        <dt>Pitch</dt><dd>How high or low a sound is heard. For a sound that repeats, the repetition rate sets it: the <b>fundamental frequency</b> \(f_0 = 1/T\). In this talk, "pitch" means \(f_0\) in Hz.</dd>
+        <dt>Harmonics</dt><dd>Sinusoids at \(f_0, 2f_0, 3f_0, \ldots\) that add up to a voice. They shape its tone (timbre), not its pitch, because the sum still repeats every \(1/f_0\).</dd>
+        <dt>Note</dt><dd>A named pitch on the 12-tone scale: A4 = 440 Hz, D4 = 293.7 Hz. Neighbouring notes are a <b>semitone</b> apart, a factor of \(2^{1/12} \approx 1.059\). Twelve semitones double \(f\): an <b>octave</b>.</dd>
+      </dl>
+      <p>So pitch is multiplicative: equal musical steps are equal ratios, not equal numbers of Hz.</p>
+      <div class="math">\[ x(t) = \sum_{h \ge 1} a_h \sin\bigl(2\pi\, h f_0\, t + \varphi_h\bigr) \]</div>
+      <figure class="code"><figcaption>synth.py · how the tests fake a hum</figcaption><pre>_HARMONICS = {"ocarina": (1.0, 0.12, 0.04),       <span class="c"># nearly a pure sine</span>
+              "hum": (1.0, 0.5, 0.25, 0.125)}     <span class="c"># rich in harmonics</span>
+tone = sum(a * np.sin((k + 1) * phase) for k, a in enumerate(amps))</pre></figure>
+    </div>
+    <figure class="panel">
+      <canvas id="wave" style="height:190px" aria-label="Waveform of the chosen note, with its repeat period marked"></canvas>
+      <canvas id="recipe" style="height:130px" aria-label="Harmonics in the sound"></canvas>
+      <div class="controls">
+        <div class="seg" role="group" aria-label="Note">
+          <button type="button" data-note="62" aria-pressed="true">D4</button>
+          <button type="button" data-note="65" aria-pressed="false">F4</button>
+          <button type="button" data-note="69" aria-pressed="false">A4</button>
+          <button type="button" data-note="71" aria-pressed="false">B4</button>
+          <button type="button" data-note="74" aria-pressed="false">D5</button>
+        </div>
+        <div class="controls" role="group" aria-label="Harmonics">
+          <button type="button" class="tog" data-harm="0" aria-pressed="true">1×</button>
+          <button type="button" class="tog" data-harm="1" aria-pressed="true">2×</button>
+          <button type="button" class="tog" data-harm="2" aria-pressed="true">3×</button>
+          <button type="button" class="tog" data-harm="3" aria-pressed="false">4×</button>
+        </div>
+        <button class="btn" id="play-pitch" type="button">▶ Hear it</button>
+      </div>
+      <p class="readout" id="pitch-out"></p>
+    </figure>
+  </div>
+</section>
+
+<!-- 4 -->
+<section class="slide" data-part="talk" data-budget="75" data-stage="0" data-notes="Before any algorithm, two terms we'll use constantly. The time domain is the signal as a list of values over time: the standard basis, one coordinate per instant. The frequency domain is the same signal written as a sum of sinusoids, each with an amplitude and a phase. The Fourier transform is just the change of coordinates between the two, and like any change of basis it loses nothing. On the right, the top line is the time domain: it's the sum of the three sinusoids below it. The bottom plot is the frequency domain. Drag the phase of the second harmonic: the waveform changes shape a lot, but the amplitudes, and the pitch you'd hear, don't change. That's why the code throws phase away and keeps only magnitudes.">
+  <div class="inner">
+    <div class="text">
+      <p class="eyebrow">Sound · two descriptions</p>
+      <h2>Time domain and frequency domain: one signal, two coordinate systems</h2>
+      <dl class="terms">
+        <dt>Time domain</dt><dd>The signal as its value at each instant: \(x(t)\), or samples \(x_0, \ldots, x_{N-1}\). In coordinates, it's the standard basis: one basis vector per instant.</dd>
+        <dt>Sinusoid</dt><dd>\(a\cos(2\pi f t + \varphi)\): a frequency f, an <b>amplitude</b> a (how big) and a <b>phase</b> φ (where its peaks sit in time).</dd>
+        <dt>Frequency domain</dt><dd>The same signal as a recipe of sinusoids: an amplitude and a phase for each frequency. The amplitudes plotted against frequency are the <b>spectrum</b>.</dd>
+        <dt>Fourier transform</dt><dd>The change of coordinates from the time domain to the frequency domain. It's invertible, so nothing is lost. The <b>DFT</b> is the version for N samples (slides 6–7).</dd>
+      </dl>
+      <ul class="points">
+        <li>Pitch is hard to read off a wiggly line but easy to read off the spectrum: a row of peaks at \(f_0, 2f_0, 3f_0\).</li>
+        <li>Drag the phases. The waveform changes shape, but the amplitudes and the pitch don't. So the recognizer keeps only the magnitudes \(|X|\) and throws the phases away.</li>
+      </ul>
+    </div>
+    <figure class="panel">
+      <canvas id="dom-time" style="height:250px" aria-label="A waveform and the three sinusoids that add up to it"></canvas>
+      <canvas id="dom-freq" style="height:150px" aria-label="Amplitude and phase of each sinusoid"></canvas>
+      <div class="controls">
+        <div class="ctl"><label for="ph2">phase of 2f₀</label><input type="range" id="ph2" min="0" max="360" step="5" value="0"><output id="ph2-out" for="ph2">0°</output></div>
+        <div class="ctl"><label for="ph3">phase of 3f₀</label><input type="range" id="ph3" min="0" max="360" step="5" value="0"><output id="ph3-out" for="ph3">0°</output></div>
+      </div>
+      <p class="readout" id="dom-out"></p>
+    </figure>
+  </div>
+</section>
+
+<!-- 5 -->
+<section class="slide" data-part="talk" data-budget="50" data-stage="1" data-notes="The song changes pitch, but within a few tens of milliseconds a hum holds one note. So every 10 ms we grab the next 40 ms. The frames overlap, and there are 100 a second. At 44.1 kHz a frame is 1,764 numbers: a vector. From here until slide 14, everything is a function of one frame vector. Drag the slider: the gold bar is the current frame, and the other bars are its neighbours, each 10 ms later.">
+  <div class="inner">
+    <div class="text">
+      <p class="eyebrow">Frames · stage 1</p>
+      <h2>Cut the recording into 40 ms frames. Each one is a vector.</h2>
+      <ul class="points">
+        <li>The pitch changes over the song but holds for tens of milliseconds. So every 10 ms (the <b>hop</b>) we take the next 40 ms (a <b>frame</b>). Frames overlap, and there are 100 a second.</li>
+        <li>At \(f_s = 44{,}100\) a frame has \(N = 1{,}764\) samples: a vector \(x \in \mathbb{R}^{1764}\). 40 ms holds 3+ periods of our lowest pitch, 80 Hz.</li>
+        <li>Every step until slide 14 is a function of one frame vector. The question for each one: what is its \(f_0\)?</li>
+      </ul>
+      <figure class="code"><figcaption>recognizer.py · track_pitch</figcaption><pre>frame, hop = config.frame_length(rate), config.hop_length(rate)
+<span class="c"># frame = 1764 samples, hop = 441 samples</span>
+frames = sliding_window_view(signal, frame)[::hop]
+<span class="c"># shape (n_frames, 1764): a strided view of signal, nothing copied</span>
+voiced = np.sqrt(np.mean(frames**2, axis=1)) &gt;= config.silence_rms</pre></figure>
+    </div>
+    <figure class="panel">
+      <canvas id="frames-all" style="height:110px" aria-label="Whole recording with the current frame highlighted"></canvas>
+      <canvas id="frames-zoom" style="height:190px" aria-label="Zoom on the current frame and its overlapping neighbours"></canvas>
+      <div class="controls">
+        <div class="ctl"><label for="t4">frame start</label><input type="range" id="t4" min="0" max="2.8" step="0.01" value="0.62"><output id="t4-out" for="t4">0.62 s</output></div>
+      </div>
+      <p class="readout" id="frames-out"></p>
+    </figure>
+  </div>
+</section>
+
+<!-- 6 -->
+<section class="slide" data-part="talk" data-budget="80" data-stage="2" data-notes="This is the key idea of the talk. We want to know how much of frequency f is in the frame. Make a probe vector, a cosine at f sampled at the same instants, and take the dot product. Start the probe at 120 Hz: the middle plot is the element-wise product, gold where it's positive and blue where it's negative. They cancel and the sum is near zero. Now drag to 147 Hz, the hum's fundamental: the probe stays in step, the products are all on one side, and the score spikes. There are also spikes at 294 and 440: those are the harmonics. A cosine alone would miss a sine shifted by a quarter period, so we also use a sine probe and take the length of the pair. Complex numbers are just the bookkeeping for that pair.">
+  <div class="inner">
+    <div class="text">
+      <p class="eyebrow">Spectrum · the key idea</p>
+      <h2>How much of frequency f is in x? Take a dot product.</h2>
+      <ul class="points">
+        <li>\(\langle x, p\rangle = \sum_n x_n p_n\) is large when x and p line up and near 0 when the products cancel. So build a <b>probe</b>: a sinusoid at f, sampled at the same N instants.</li>
+        <li>If x contains f, the probe stays in step and the products keep one sign. Otherwise they alternate and cancel.</li>
+        <li>A cosine probe misses a sine shifted by a quarter period, so also use a sine probe and take the length of the pair. Complex numbers do that bookkeeping: \(e^{-i\theta} = \cos\theta - i\sin\theta\).</li>
+      </ul>
+      <div class="math">\[ \text{score}(f) = \Bigl|\sum_{n=0}^{N-1} x_n\, e^{-2\pi i f n / f_s}\Bigr| = \sqrt{\langle x, \cos_f\rangle^2 + \langle x, \sin_f\rangle^2} \]</div>
+      <figure class="code"><figcaption>One probe by hand (the real code never loops over frequencies)</figcaption><pre>n = np.arange(N)
+score = abs(x @ np.exp(-2j * np.pi * f * n / fs))</pre></figure>
+    </div>
+    <figure class="panel">
+      <canvas id="probe-sig" style="height:110px" aria-label="Frame and probe"></canvas>
+      <canvas id="probe-prod" style="height:90px" aria-label="Element-wise product of frame and probe"></canvas>
+      <canvas id="probe-score" style="height:150px" aria-label="Score for every probe frequency"></canvas>
+      <div class="controls">
+        <div class="ctl"><label for="pf">probe f</label><input type="range" id="pf" min="60" max="700" value="120"><output id="pf-out" for="pf">120 Hz</output></div>
+      </div>
+      <p class="cap"><span class="key" style="background:var(--sky)"></span>a hummed frame at D3 (146.8 Hz) <span class="key" style="background:var(--gold)"></span>the cosine probe. Middle: \(x_n \cdot \cos_f[n]\), whose sum is the dot product. Bottom: the score for every probe frequency.</p>
+      <p class="readout" id="probe-out"></p>
+    </figure>
+  </div>
+</section>
+
+<!-- 7 -->
+<section class="slide" data-part="talk" data-budget="75" data-stage="2" data-notes="Now do every probe at once. Pick N probe frequencies on a grid, k cycles per frame for k from 0 to N-1, and stack them as rows of a matrix F. Then all N scores are one matrix-vector product, X = F x: that's the discrete Fourier transform. The rows are orthogonal. Drag j and k apart: the N terms of their inner product are unit arrows that walk around a closed polygon and end where they started, which is the geometric series of a root of unity. Set j = k and they line up into length N. So F-star F is N times the identity: F is unitary up to a factor of N, and F over root N is a genuine rotation of complex N-space. That gives the inverse for free, conjugate transpose over N, and Parseval: energy is preserved.">
+  <div class="inner">
+    <div class="text">
+      <p class="eyebrow">Spectrum · linear algebra</p>
+      <h2>All probes at once: the DFT matrix, whose rows are orthogonal</h2>
+      <ul class="points">
+        <li>Put the probes on a grid: row k of F oscillates k times across the frame, at frequency \(k f_s/N\). Then all N scores are one product, \(X = Fx\): the <b>discrete Fourier transform</b> (DFT). Each entry \(X_k\) is a frequency <b>bin</b>.</li>
+        <li>The rows are <b>orthogonal</b>. For \(j \ne k\) the terms of \(\langle f_j, f_k\rangle\) are powers of \(r = e^{2\pi i (k-j)/N} \ne 1\), a root of unity (\(r^N = 1\)). They walk around a closed polygon and the geometric series sums to 0. Drag j and k.</li>
+        <li>So \(F^{*}F = N\,I\). F is unitary up to a factor of N, and \(F/\sqrt N\) is a rotation of \(\mathbb{C}^N\): the inverse is \(F^{*}/N\), and length is kept, \(\lVert x\rVert^2 = \tfrac1N\lVert X\rVert^2\) (Parseval).</li>
+      </ul>
+      <div class="math">\[ F_{kn} = e^{-2\pi i\,kn/N}, \qquad \langle f_j, f_k\rangle = \sum_{n=0}^{N-1} r^{n} = \frac{1-r^{N}}{1-r} = 0 \]</div>
+      <figure class="code"><figcaption>Check it in NumPy</figcaption><pre>F = np.exp(-2j * np.pi * np.outer(n, n) / N)
+np.allclose(F @ x, np.fft.fft(x))           <span class="c"># True: fft computes F x</span>
+np.allclose(F.conj().T @ F, N * np.eye(N))  <span class="c"># True: F*F = N·I</span>
+np.fft.fft(x, norm="ortho")                 <span class="c"># (F/√N) x, unitary</span>
+np.fft.ifft(X)                              <span class="c"># (F*/N) X: the 1/N lives here</span></pre></figure>
+    </div>
+    <figure class="panel">
+      <div class="pair">
+        <div><canvas id="matrix" style="height:220px" aria-label="Heat map of the real part of the 16 by 16 DFT matrix"></canvas><p class="cap">\(\operatorname{Re} F\), N = 16: gold +1, blue −1.</p></div>
+        <div><canvas id="phasor" style="height:220px" aria-label="Head-to-tail sum of the inner product terms"></canvas><p class="cap">The N terms of \(\langle f_j, f_k\rangle\), head to tail.</p></div>
+      </div>
+      <canvas id="row" style="height:110px" aria-label="Real parts of rows j and k"></canvas>
+      <div class="controls">
+        <div class="ctl"><label for="dj">row j</label><input type="range" id="dj" min="0" max="15" value="2"><output id="dj-out" for="dj">2</output></div>
+        <div class="ctl"><label for="dk">row k</label><input type="range" id="dk" min="0" max="15" value="3"><output id="dk-out" for="dk">3</output></div>
+      </div>
+      <p class="readout" id="phasor-out"></p>
+    </figure>
+  </div>
+</section>
+
+<!-- 8 -->
+<section class="slide" data-part="talk" data-budget="70" data-stage="2" data-notes="Here's the assumption hiding inside the DFT. Every row of F repeats every N samples, so anything the DFT can represent repeats every N samples. In effect it treats your frame as one period of an endless loop. You can always do that with a finite list: tile it end to end. At 2 cycles per frame the copies join seamlessly and the spectrum is two clean spikes. Drag to 2.5: now there's a jump at every seam, and the spectrum smears out. That's leakage, which we fix on slide 11. The same is true in frequency: X repeats every N bins. The gold window is what fft stores, 0 to N−1; the blue window is the same N numbers centred. So the upper half of the stored array is the negative frequencies, which we read off on slide 10.">
+  <div class="inner">
+    <div class="text">
+      <p class="eyebrow">Spectrum · the DFT's hidden assumption</p>
+      <h2>The DFT sees a loop: periodic in time and in frequency</h2>
+      <ul class="points">
+        <li>Every row of F repeats every N samples: \(e^{-2\pi i k(n+N)/N} = e^{-2\pi i kn/N}\). So anything built from the rows, including x rebuilt from X, repeats too. The DFT treats your N samples as <b>one period of an endless loop</b>.</li>
+        <li>That's always possible: tile any finite list end to end and you get a periodic signal, its <b>periodic extension</b>. Nothing is lost. But if the end doesn't flow into the start, the loop has a jump the sound never had, and that jump causes leakage (slide 11).</li>
+        <li>The same holds in frequency: \(F_{k+N,\,n} = F_{kn}\), so \(X_{k+N} = X_k\). Frequencies k and k+N give identical samples (<b>aliasing</b>), so bins \(N/2 \ldots N-1\) are the same as \(-N/2 \ldots -1\): the negative frequencies of slide 10.</li>
+      </ul>
+      <div class="math">\[ x_{n+N} = x_n, \qquad X_{k+N} = X_k \]</div>
+      <figure class="code"><figcaption>Check it in NumPy</figcaption><pre>k = np.arange(-N, 2 * N)                           <span class="c"># three periods of k</span>
+Xk = np.exp(-2j * np.pi * np.outer(k, n) / N) @ x  <span class="c"># DFT at any k</span>
+np.allclose(Xk, np.fft.fft(x)[k % N])              <span class="c"># True: X[k+N] = X[k]</span></pre></figure>
+    </div>
+    <figure class="panel">
+      <canvas id="loop-time" style="height:150px" aria-label="A frame tiled end to end, as the DFT sees it"></canvas>
+      <canvas id="loop-freq" style="height:170px" aria-label="DFT magnitudes over three periods of k"></canvas>
+      <div class="controls">
+        <div class="ctl"><label for="lc">cycles per frame</label><input type="range" id="lc" min="1" max="6" step="0.25" value="2"><output id="lc-out" for="lc">2.00</output></div>
+      </div>
+      <p class="cap">Top: the frame (bright) and its copies, as the DFT sees them. Bottom: \(|X_k|\) for k = −N … 2N−1, with N = 32. <span class="key" style="background:var(--gold)"></span>the N bins <code>fft</code> stores (0 … N−1) <span class="key" style="background:var(--sky)"></span>the same N numbers centred (−N/2 … N/2−1, <code>fftshift</code>)</p>
+      <p class="readout" id="loop-out"></p>
+    </figure>
+  </div>
+</section>
+
+<!-- 9 -->
+<section class="slide" data-part="talk" data-budget="70" data-stage="2" data-notes="Why sinusoids and not some other orthogonal basis? Because they're the eigenvectors of shifting. Shift a sampled sinusoid by one sample and you get the same sinusoid times a phase. A circulant matrix, where each row is the previous row shifted, is a polynomial in the shift matrix, so the same basis diagonalizes it, and its eigenvalues are the DFT of its first column. Circulant matrices are exactly cyclic convolutions, so this is the convolution theorem. Look at the right heat map: F C F-inverse is diagonal for every kernel. Two payoffs for us. First, shift has eigenvalues of size 1, so if the note starts a bit later in the frame, only the phases change, and the magnitudes we keep stay put. Second, the same thing works in reverse: multiplying by a diagonal matrix in time is a convolution in frequency, which is slide 11.">
+  <div class="inner">
+    <div class="text">
+      <p class="eyebrow">Spectrum · why sinusoids?</p>
+      <h2>Fourier vectors diagonalize every shift-invariant matrix</h2>
+      <ul class="points">
+        <li>Let S shift a vector by one sample, cyclically, since the DFT sees a loop (slide 8): \((Sx)_n = x_{n-1}\). Each Fourier vector is an eigenvector, \(S f_k = e^{-2\pi i k/N} f_k\): shifting a sinusoid only changes its phase.</li>
+        <li>A <b>circulant</b> matrix C, with each row the previous one shifted, is a polynomial in S, so the same basis <b>diagonalizes</b> it. Its eigenvalues are \(Fc\), the DFT of its first column. Circulants are cyclic convolutions, so this is the convolution theorem: \(c \circledast x \;\mapsto\; (Fc) \odot (Fx)\).</li>
+        <li>Payoff 1: a note that starts later in the frame changes only phases, \(|\lambda| = 1\), so \(|X|\), the only thing we keep, stays put. Payoff 2: the dual also holds, so multiplying by a window (a diagonal matrix) convolves the spectrum. That's slide 11.</li>
+      </ul>
+      <div class="math">\[ S = F^{-1} \operatorname{diag}\bigl(e^{-2\pi i k/N}\bigr) F, \qquad C = F^{-1} \operatorname{diag}(Fc)\, F \]</div>
+      <figure class="code"><figcaption>Check it in NumPy</figcaption><pre>C = scipy.linalg.circulant(c)                <span class="c"># c is the first column</span>
+np.allclose(F @ C @ np.linalg.inv(F), np.diag(np.fft.fft(c)))    <span class="c"># True</span>
+np.allclose(abs(np.fft.fft(np.roll(x, 5))), abs(np.fft.fft(x)))  <span class="c"># True</span></pre></figure>
+    </div>
+    <figure class="panel">
+      <div class="pair">
+        <div><canvas id="circ" style="height:210px" aria-label="Heat map of a circulant matrix"></canvas><p class="cap">C, a circulant (16 × 16)</p></div>
+        <div><canvas id="circ-d" style="height:210px" aria-label="Heat map of F C F inverse"></canvas><p class="cap">\(|F C F^{-1}|\): diagonal</p></div>
+      </div>
+      <canvas id="eig" style="height:150px" aria-label="Eigenvalues of C in the complex plane"></canvas>
+      <div class="controls">
+        <div class="seg" role="group" aria-label="Circulant">
+          <button type="button" data-circ="shift" aria-pressed="true">Shift by 1</button>
+          <button type="button" data-circ="blur" aria-pressed="false">Blur (¼ ½ ¼)</button>
+          <button type="button" data-circ="random" aria-pressed="false">Random filter</button>
+        </div>
+      </div>
+      <p class="readout" id="circ-out"></p>
+    </figure>
+  </div>
+</section>
+
+<!-- 10 -->
+<section class="slide" data-part="talk" data-budget="70" data-stage="2" data-notes="Before using np.fft we have to read its output. Bin k is frequency k times fs over N. Bin 0 is the zero frequency, N times the mean. The first half holds positive frequencies. Past the middle the bins are negative frequencies, because e to the minus 2 pi i k n over N equals the same thing with k minus N: there's no difference on the sample grid. For even N, bin N/2 is the Nyquist frequency, half the sample rate, the fastest wiggle the samples can hold: plus-or-minus one every sample. Odd N has no such bin. For a real input the negative half is the complex conjugate of the positive half. Watch the phase dials mirror. So rfft returns only bins 0 to N/2 and does half the work. Our frames are real, and next_fast_len picks 7,200, which is even, so we get 3,601 bins from 0 Hz up to 22,050 Hz. Switch to the complex exponential: one bin, no mirror. Set k to N/2 with a real cosine: the bin is real and the phase is lost, because sine of pi n is zero.">
+  <div class="inner">
+    <div class="text">
+      <p class="eyebrow">Spectrum · reading NumPy's output</p>
+      <h2>What <code>fft</code> returns: one array, in a particular order</h2>
+      <ul class="points">
+        <li>Index k is frequency \(k f_s/N\). <b>Bin 0</b> is the zero frequency (DC): N times the mean, always real. Bins \(1 \ldots N/2-1\) are positive frequencies.</li>
+        <li>Bins past the middle are <b>negative frequencies</b> (slide 8): bin k means \(k-N\), since \(e^{-2\pi i kn/N} = e^{-2\pi i (k-N)n/N}\) on the sample grid. For even N, bin N/2 is the <b>Nyquist frequency</b> \(f_s/2\), the fastest wiggle samples can hold (±1 alternating). Odd N has no such bin. <code>fftfreq</code> labels the bins, and <code>fftshift</code> moves 0 to the middle.</li>
+        <li>Real x gives \(X_{N-k} = \overline{X_k}\): the top half mirrors the bottom, and bins 0 and N/2 are real. So <code>rfft</code> returns only \(\lfloor N/2\rfloor + 1\) bins, for about half the work. A unit cosine at bin k gives \(|X_k| = N/2\), split between +k and −k.</li>
+      </ul>
+      <figure class="code"><figcaption>recognizer.py · magnitude_spectrum</figcaption><pre>n_fft = fft.next_fast_len(n * zero_pad, real=True)  <span class="c"># 7056 → 7200, even</span>
+spectrum = np.abs(fft.rfft(frames * np.hanning(n), n=n_fft, axis=-1))
+<span class="c"># n=n_fft zero-pads each frame; rfft returns 7200/2 + 1 = 3601 bins</span>
+return spectrum, sample_rate / n_fft  <span class="c"># 6.125 Hz apart, 0 … 22,050 Hz</span></pre></figure>
+    </div>
+    <figure class="panel">
+      <canvas id="layout" style="height:270px" aria-label="Magnitude and phase of every DFT bin"></canvas>
+      <div class="controls">
+        <div class="ctl"><label for="ln">N</label><input type="range" id="ln" min="5" max="16" value="8"><output id="ln-out" for="ln">8</output></div>
+        <div class="ctl"><label for="lk">input k</label><input type="range" id="lk" min="0" max="7" value="2"><output id="lk-out" for="lk">2</output></div>
+      </div>
+      <div class="controls">
+        <div class="seg" role="group" aria-label="Input signal">
+          <button type="button" data-lay="real" aria-pressed="true">Real cosine</button>
+          <button type="button" data-lay="offset" aria-pressed="false">Cosine + offset</button>
+          <button type="button" data-lay="complex" aria-pressed="false">Complex \(e^{i\omega n}\)</button>
+        </div>
+        <div class="seg" role="group" aria-label="Order">
+          <button type="button" data-order="stored" aria-pressed="true">As stored</button>
+          <button type="button" data-order="shift" aria-pressed="false">fftshift</button>
+        </div>
+      </div>
+      <p class="cap"><span class="key" style="background:var(--text)"></span>DC <span class="key" style="background:var(--gold)"></span>positive <span class="key" style="background:var(--good)"></span>Nyquist <span class="key" style="background:var(--sky)"></span>negative. Dials show each bin's phase. Faded bins are the mirror half that <code>rfft</code> drops.</p>
+      <p class="readout" id="layout-out"></p>
+    </figure>
+  </div>
+</section>
+
+<!-- 11 -->
+<section class="slide" data-part="talk" data-budget="55" data-stage="2" data-notes="The grid only has whole numbers of cycles per frame, and a hummed note almost never lands exactly on one. The DFT treats the frame as one period of a loop, so the top plot shows the seam where the loop restarts: a jump. That jump spreads energy into every bin. The fix is to fade the frame in and out with a Hann window. By slide 9, multiplying by a diagonal matrix in time is a convolution in frequency, and for Hann it's just three taps. The trade is a slightly wider peak for much quieter distant bins. Toggle Hann and watch the far bins drop.">
+  <div class="inner">
+    <div class="text">
+      <p class="eyebrow">Spectrum · windowing</p>
+      <h2>Notes fall between grid lines: leakage, and the window that fixes it</h2>
+      <ul class="points">
+        <li>Bin k means exactly k cycles per frame. A hummed note rarely fits a whole number of cycles, so it isn't one basis vector, and its projection spreads over every bin: <b>leakage</b>.</li>
+        <li>The DFT treats the frame as one period of a loop (slide 8), and the loop has a jump at its seam. Fade the frame to 0 at both ends with the <b>Hann window</b> w. By slide 9, \(\operatorname{diag}(w)\) in time is a convolution in frequency, and for Hann it has only 3 taps:</li>
+      </ul>
+      <div class="math">\[ \widehat{w \odot x} = \tfrac1N\, \hat w \circledast \hat x, \qquad \hat w = N\bigl(-\tfrac14,\ \tfrac12,\ -\tfrac14\bigr) \text{ at bins } -1, 0, 1 \]</div>
+      <p>The trade: the peak widens to ±2 bins, but far bins fall from −13 dB to −31 dB. A decibel is \(20\log_{10}\) of an amplitude ratio, so −20 dB is 10× smaller.</p>
+      <figure class="code"><figcaption>recognizer.py · magnitude_spectrum</figcaption><pre>frames * np.hanning(n)   <span class="c"># symmetric Hann: both ends exactly 0</span>
+<span class="c"># scipy.signal.get_window("hann", n) is the periodic variant;</span>
+<span class="c"># at n = 1764 the difference is negligible</span></pre></figure>
+    </div>
+    <figure class="panel">
+      <canvas id="leak-time" style="height:110px" aria-label="Frame samples and the seam where the DFT loops the frame"></canvas>
+      <canvas id="leak" style="height:220px" aria-label="Spectrum in decibels"></canvas>
+      <div class="controls">
+        <div class="ctl"><label for="cyc">cycles per frame</label><input type="range" id="cyc" min="8" max="12" step="0.05" value="10.5"><output id="cyc-out" for="cyc">10.50</output></div>
+        <div class="seg" role="group" aria-label="Window">
+          <button type="button" data-leak="rect" aria-pressed="true">No window</button>
+          <button type="button" data-leak="hann" aria-pressed="false">Hann</button>
+        </div>
+      </div>
+      <p class="readout" id="leak-out"></p>
+    </figure>
+  </div>
+</section>
+
+<!-- 12 -->
+<section class="slide" data-part="talk" data-budget="60" data-stage="2" data-notes="Computing F x directly is N squared multiply-adds. With our padded N of 7,200 at 100 frames a second, that's 5 billion a second. The FFT is divide and conquer, exactly like merge sort: split into even and odd samples, do two half-size DFTs, and combine them with N/2 butterflies. That's T(N) = 2T(N/2) + O(N), so N log N. In matrix language F factors into log N sparse matrices, each with two nonzeros per row. SciPy also splits by 3 and 5, which is why the code pads to 7,200, a product of 2s, 3s and 5s. Drag log2 N to see the gap grow.">
+  <div class="inner">
+    <div class="text">
+      <p class="eyebrow">Spectrum · speed</p>
+      <h2>The FFT: the same answer, by divide and conquer</h2>
+      <ul class="points">
+        <li>\(Fx\) done directly is \(N^2\) multiply-adds. For N = 7,200 at 100 frames a second, that's 5 billion a second.</li>
+        <li>Split x into even and odd samples. Each half needs an N/2-point DFT, and they combine with N/2 "butterflies". Like merge sort: \(T(N) = 2T(N/2) + O(N) = O(N\log N)\). Below, \(\omega = e^{-2\pi i/N}\).</li>
+        <li>As matrices, F factors into \(\log_2 N\) sparse factors with 2 nonzeros per row. SciPy also splits by 3 and 5, so 7,200 = 2⁵·3²·5² is fast. A large prime size would not be.</li>
+      </ul>
+      <div class="math">\[ X_k = E_k + \omega^{k} O_k, \qquad X_{k+N/2} = E_k - \omega^{k} O_k \]</div>
+      <figure class="code"><figcaption>recognizer.py · magnitude_spectrum</figcaption><pre>fft.next_fast_len(7056, real=True)   <span class="c"># 7200 = 2⁵·3²·5²</span>
+<span class="c"># the smallest size ≥ 7056 made only of 2s, 3s and 5s</span></pre></figure>
+    </div>
+    <figure class="panel">
+      <canvas id="bfly" style="height:220px" aria-label="Butterfly diagram for an 8-point FFT"></canvas>
+      <p class="cap">8-point FFT: inputs in bit-reversed order (evens before odds, recursively), then 2-, 4- and 8-point stages. One butterfly is highlighted.</p>
+      <canvas id="ops" style="height:96px" aria-label="Operation counts on a log scale"></canvas>
+      <div class="controls">
+        <div class="ctl"><label for="logn">log₂ N</label><input type="range" id="logn" min="3" max="16" value="13"><output id="logn-out" for="logn">13</output></div>
+      </div>
+      <p class="readout" id="ops-out"></p>
+    </figure>
+  </div>
+</section>
+
+<!-- 13 -->
+<section class="slide" data-part="talk" data-budget="65" data-stage="3" data-notes="Now we have a spectrum per frame: which peak is the note? The default sound here has a weak fundamental, which is common for low voices, and the tallest peak is 2f0, an octave too high. The harmonic product spectrum scores each candidate by multiplying the spectrum at f, 2f and 3f. Only the true fundamental has energy at all three, so it's an AND of three tests. In code it's the slice spectrum[: h*n_bins : h], which reads bins 0, h, 2h and so on. Then switch to Whistle and turn the floor off: a whistle is almost a pure sine, and a subharmonic can win on noise. The 10% floor stops that.">
+  <div class="inner">
+    <div class="text">
+      <p class="eyebrow">Pitch · stage 3</p>
+      <h2>Which peak is the note? Multiply the evidence.</h2>
+      <ul class="points">
+        <li>A hum has a peak at every harmonic. The tallest is often \(2f_0\): the octave error from slide 3.</li>
+        <li>The <b>harmonic product spectrum</b> scores each candidate f by \(|X(f)|\,|X(2f)|\,|X(3f)|\). Only the true \(f_0\) has a peak at all three, so it acts like an AND of three tests.</li>
+        <li>A guard: a whistle is nearly a pure sine, so 2f and 3f hold only noise and a subharmonic can win. A candidate must reach 10% of the loudest bin.</li>
+      </ul>
+      <div class="math">\[ P[k] = \prod_{h=1}^{3} \bigl|X[hk]\bigr| \]</div>
+      <figure class="code"><figcaption>recognizer.py · harmonic_product</figcaption><pre>n_bins = spectrum.shape[-1] // harmonics  <span class="c"># 3601 // 3 = 1200</span>
+hps = spectrum[..., :n_bins].copy()       <span class="c"># so 3k stays below Nyquist</span>
+for h in range(2, harmonics + 1):
+    hps *= spectrum[..., : h * n_bins : h]  <span class="c"># bins 0, h, 2h, …</span></pre></figure>
+    </div>
+    <figure class="panel">
+      <canvas id="hps-spec" style="height:150px" aria-label="Magnitude spectrum"></canvas>
+      <canvas id="hps-prod" style="height:150px" aria-label="Harmonic product spectrum"></canvas>
+      <div class="controls">
+        <div class="ctl"><label for="f0">f₀</label><input type="range" id="f0" min="100" max="440" value="220"><output id="f0-out" for="f0">220 Hz</output></div>
+        <div class="seg" role="group" aria-label="Sound">
+          <button type="button" data-tone="hum" aria-pressed="false">Hum</button>
+          <button type="button" data-tone="weak" aria-pressed="true">Weak fundamental</button>
+          <button type="button" data-tone="whistle" aria-pressed="false">Whistle</button>
+        </div>
+        <button type="button" class="btn" id="floor" aria-pressed="true">10% floor: on</button>
+      </div>
+      <p class="readout" id="hps-out"></p>
+    </figure>
+  </div>
+</section>
+
+<!-- 14 -->
+<section class="slide" data-part="talk" data-budget="50" data-stage="3" data-notes="Resolution. Bins are fs over N apart: 25 Hz for a 40 ms frame. But down at D3, neighbouring semitones are under 9 Hz apart, so the nearest bin can be a whole semitone off. Two fixes. Zero-padding: append zeros to 7,200 samples, which samples the same smooth curve every 6 Hz. That's a finer grid, but no new information. Then fit a parabola through the top three bins and take its vertex, like sub-pixel peak finding in images. We fit on log magnitude because a windowed peak is close to a Gaussian, and the log of a Gaussian is exactly a parabola. Toggle 1,764 vs 7,200 points and watch the cents error.">
+  <div class="inner">
+    <div class="text">
+      <p class="eyebrow">Pitch · precision</p>
+      <h2>25 Hz bins can't tell D3 from D♯3: zoom in, then interpolate</h2>
+      <ul class="points">
+        <li>Bins are \(f_s/N = 44{,}100/1{,}764 = 25\) Hz apart, but at D3 (147 Hz) neighbouring semitones are 8.7 Hz apart.</li>
+        <li><b>Zero-padding</b> to 7,200 samples (the <code>n=n_fft</code> argument) samples the same smooth curve every 6.1 Hz. The grid is finer, but there's no new information.</li>
+        <li>Then fit a parabola through the top bin and its two neighbours and take the vertex: sub-pixel peak finding. We fit on log magnitude because a windowed peak is close to a Gaussian, whose log is exactly a parabola.</li>
+      </ul>
+      <div class="math">\[ \delta = \frac12\,\frac{\alpha - \gamma}{\alpha - 2\beta + \gamma}, \qquad \hat f = (k + \delta)\,\frac{f_s}{N_{\mathrm{fft}}} \]</div>
+      <figure class="code"><figcaption>recognizer.py · refine_peaks (after a short hill-climb to the top)</figcaption><pre>left, here, right = (np.log(spectrum[rows, bins + d] + 1e-12)
+                     for d in (-1, 0, 1))
+curvature = left - 2 * here + right       <span class="c"># &lt; 0 at a real peak</span>
+offset = np.divide(0.5 * (left - right), curvature,
+                   out=np.zeros_like(curvature), where=curvature &lt; 0)</pre></figure>
+    </div>
+    <figure class="panel">
+      <canvas id="para" style="height:280px" aria-label="Spectral peak with parabolic fit"></canvas>
+      <div class="controls">
+        <div class="ctl"><label for="ftrue">true pitch</label><input type="range" id="ftrue" min="140" max="160" step="0.1" value="146.8"><output id="ftrue-out" for="ftrue">146.8 Hz</output></div>
+        <div class="seg" role="group" aria-label="FFT length">
+          <button type="button" data-nfft="1764" aria-pressed="true">1,764 points</button>
+          <button type="button" data-nfft="7200" aria-pressed="false">7,200 points</button>
+        </div>
+      </div>
+      <p class="readout" id="para-out"></p>
+    </figure>
+  </div>
+</section>
+
+<!-- 15 -->
+<section class="slide" data-part="talk" data-budget="65" data-stage="4" data-notes="We now have one frequency per frame, about 100 a second. Since semitones multiply, take a log: the MIDI formula makes a semitone +1 and A4 = 69, and then we round. But people aren't tuned to A440. Push the slider toward 50 cents and naive rounding splits frames between two notes. The fractional part is circular, so 0.99 is next to 0.01. Put each frame on the unit circle, average, and the angle of the mean is the singer's offset. That's one Fourier coefficient of the pitch distribution, the same phasor trick as slide 7. Finally, runs shorter than 80 ms are slides between notes and are dropped, and a repeated note only counts twice if there's a 30 ms gap.">
+  <div class="inner">
+    <div class="text">
+      <p class="eyebrow">Notes · stage 4</p>
+      <h2>From hertz to notes, in the singer's own tuning</h2>
+      <ul class="points">
+        <li>Semitones multiply, so take a log: \(m = 69 + 12\log_2(f/440)\). A semitone is now +1, and A4 is 69 (the MIDI numbering). Round to get a note.</li>
+        <li>Few people hum in tune with A440. Someone 45 <b>cents</b> sharp (a cent is 1/100 of a semitone) sits near the rounding boundary, and their notes split.</li>
+        <li>The fractional part is circular (0.99 is next to 0.01). Put each frame on the unit circle and average: the angle of the mean is the tuning offset. Subtract it, then round.</li>
+        <li>Then frames become notes. Runs under 80 ms are slides and are dropped, and a repeated note needs a 30 ms gap.</li>
+      </ul>
+      <div class="math">\[ \text{detune} = \frac{1}{2\pi}\arg\Bigl(\frac1T\sum_{t} e^{2\pi i\, m_t}\Bigr) \]</div>
+      <figure class="code"><figcaption>recognizer.py · hz_to_midi, estimate_detune, analyze</figcaption><pre>midi = 69 + 12 * np.log2(frequencies / 440.0)  <span class="c"># NaN stays NaN</span>
+detune = np.angle(np.mean(np.exp(2j * np.pi * voiced))) / (2 * np.pi)
+track = [None if np.isnan(m) else int(round(m - detune)) for m in midi]</pre></figure>
+    </div>
+    <figure class="panel">
+      <canvas id="circle" style="height:230px" aria-label="Fractional pitch of each frame on the unit circle"></canvas>
+      <canvas id="strip" style="height:92px" aria-label="Frames rounded correctly or wrongly"></canvas>
+      <div class="controls">
+        <div class="ctl"><label for="cents">singer's detune</label><input type="range" id="cents" min="-50" max="50" value="42"><output id="cents-out" for="cents">+42 ¢</output></div>
+      </div>
+      <p class="readout" id="circle-out"></p>
+    </figure>
+  </div>
+</section>
+
+<!-- 16 -->
+<section class="slide" data-part="talk" data-budget="75" data-stage="5" data-notes="Last stage. A song is a short vector of note numbers. Humming it lower subtracts the same number from every entry, so all the keys of one song form a line along the all-ones vector. The distance from what you hummed to that line is the error. In L2 the best shift would be the mean; in L1 it's the median, so one wrong note can't drag the key off. Pick a song and try the four variants: in another key it's still a perfect match; one wrong note still matches; backwards, the same notes in reverse, is rejected. The two closest songs are 1.17 apart, and the tolerance is 0.5, so by the triangle inequality no hum can be within tolerance of two songs.">
+  <div class="inner">
+    <div class="text">
+      <p class="eyebrow">Song · stage 5</p>
+      <h2>Match in any key: a melody is a vector, a key change is a line</h2>
+      <ul class="points">
+        <li>A song is a vector of note numbers \(s \in \mathbb{Z}^{L}\), with L = 5 to 8. Humming it c semitones lower gives \(s - c\mathbf 1\), so all keys of one song form a line along \(\mathbf 1 = (1, \ldots, 1)\).</li>
+        <li>The error is the L1 distance to that line. The best shift is the <b>median</b> of the differences (in L2 it would be the mean), so one wrong note can't drag the key.</li>
+        <li>Slide each song over every window of your notes, keep the best, and accept if \(E \le 0.5\). The two closest songs are 1.17 apart, so by the triangle inequality no hum is within 0.5 of both.</li>
+      </ul>
+      <div class="math">\[ E(x, s) = \min_{c\in\mathbb{R}}\ \frac1L \bigl\lVert x - s - c\mathbf{1} \bigr\rVert_1, \qquad c^{\star} = \operatorname{median}(x - s) \]</div>
+      <figure class="code"><figcaption>recognizer.py · rank_songs</figcaption><pre><span class="c"># one row per window of your notes, minus the song</span>
+diffs = sliding_window_view(played, len(melody)) - np.asarray(melody)
+offsets = np.median(diffs, axis=1)          <span class="c"># best key per window</span>
+errors = np.abs(diffs - offsets[:, None]).mean(axis=1)  <span class="c"># L1 to line</span></pre></figure>
+    </div>
+    <figure class="panel">
+      <div class="controls">
+        <label class="cap" for="song">Song</label>
+        <select id="song"></select>
+        <button class="btn" id="play-match" type="button">▶ Play</button>
+      </div>
+      <div class="seg" role="group" aria-label="How it's hummed">
+        <button type="button" data-variant="exact" aria-pressed="false">As written</button>
+        <button type="button" data-variant="lower" aria-pressed="true">10 semitones lower</button>
+        <button type="button" data-variant="slip" aria-pressed="false">One wrong note</button>
+        <button type="button" data-variant="back" aria-pressed="false">Backwards</button>
+      </div>
+      <div class="chips" id="hummed"></div>
+      <canvas id="match" style="height:290px" aria-label="Error against every song"></canvas>
+      <p class="cap">Each bar is a song's mean semitone error after the best key shift. Songs longer than the hum show a dash. The dashed line is the 0.5 tolerance.</p>
+      <p class="verdict" id="verdict"></p>
+    </figure>
+  </div>
+</section>
+
+<!-- 17 -->
+<section class="slide" data-part="talk" data-budget="60" data-notes="People always ask how this relates to Shazam. Shazam answers a different question: which recording is this? Its published algorithm takes the spectrogram, keeps only the strongest peaks, hashes pairs of peaks together with their time gap, and looks the hashes up in a giant index. A true match shows many hashes agreeing on one time offset. That's very robust to noise, but a hum shares no peaks with the studio recording, so it can't recognise humming. Hum-to-search services solve that with machine-learned embeddings trained on lots of data. We need neither: 12 songs known in advance, far apart from each other, and a player humming one clear note at a time. The game only needs which melody, so a note sequence and a brute-force distance to 12 lines is enough, and the invariances we need come from a median and a logarithm instead of training.">
+  <div class="inner single">
+    <div class="text">
+      <p class="eyebrow">Perspective</p>
+      <h2>Why not Shazam? A different question needs a different tool</h2>
+    </div>
+    <div class="table-wrap">
+      <table class="cmp">
+        <thead><tr><th></th><th>Audio fingerprinting<br><span>Shazam</span></th><th>Query by humming<br><span>hum-to-search apps</span></th><th>This tool<br><span>a fixed songbook</span></th></tr></thead>
+        <tbody>
+          <tr><td>Question</td><td>Which <i>recording</i> is playing?</td><td>Which song is this hum?</td><td>Which of 12 known melodies is this hum, if any?</td></tr>
+          <tr><td>Database</td><td>Tens of millions of tracks</td><td>Millions of songs</td><td>12 melodies of 5–8 notes, from 5 pitches</td></tr>
+          <tr><td>Representation</td><td>Spectrogram peaks, hashed in pairs as (f₁, f₂, Δt)</td><td>Learned embeddings: neural networks trained to place a hum near its song</td><td>A sequence of notes (MIDI numbers)</td></tr>
+          <tr><td>Ignores</td><td>Noise, compression, where the clip starts</td><td>Key, tempo, voice</td><td>Key (median shift), tuning (circular mean), tempo and timbre (durations and harmonics are dropped)</td></tr>
+          <tr><td>Matching</td><td>Hash lookups, then a consistent time offset</td><td>Nearest neighbour among embeddings</td><td>L1 distance to all 12 lines, with a rejection threshold</td></tr>
+          <tr><td>Limits</td><td>Can't recognize a hum: it shares no peaks with the record</td><td>Needs a large training set and a server</td><td>Chords, big catalogues, songs that differ only in rhythm, noisy rooms</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <ul class="points">
+      <li><b>Small, fixed and well separated.</b> 12 songs are known in advance, and the closest pair is 1.17 apart against a 0.5 tolerance. Comparing against all of them is instant, and a threshold can safely say "no match".</li>
+      <li><b>A cooperative player.</b> One sustained note at a time, on purpose, usually in a quiet room: the easy case for tracking \(f_0\).</li>
+      <li><b>The game only needs which melody.</b> Throwing away timing, timbre and key isn't a loss. It's exactly the invariance we want, bought with a median and a logarithm instead of training data.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- 18 -->
+<section class="slide" data-part="talk" data-budget="70" data-notes="Here's how that maps onto the code. Follow one ocarina listen. cli.py parses flags and calls audio.record, which streams mic blocks through PortAudio. Every half second the LiveView callback runs the recognizer on everything recorded so far, and stops the recording as soon as a song matches. recognizer.analyze is stages 1 to 4: normalize, then track_pitch does frames, the windowed rfft, the harmonic product and the parabola, then hz_to_midi, the circular-mean detune and segment_notes. rank_songs is stage 5, against the tuples in songs.py. Then synth renders the matched song and audio plays it, and plot.py draws the report, reusing the recognizer's own spectrum functions so it shows exactly what was computed. All the tuning constants live in one frozen dataclass, DetectorConfig.">
+  <div class="inner">
+    <div class="text">
+      <p class="eyebrow">The code</p>
+      <h2>One pipeline, six files</h2>
+      <p class="muted">What happens when you run <code>ocarina listen</code>:</p>
+      <ol class="flow">
+        <li><p><code>cli.py</code> · <b>cmd_listen</b> parses the flags and calls <code>audio.record(on_update=LiveView(...))</code>.</p></li>
+        <li><p><code>audio.py</code> · <b>record</b> streams mic blocks through PortAudio (<code>sounddevice</code>). Every 0.5 s, <b>LiveView</b> re-runs steps 3–4 on the audio so far and stops as soon as a song matches.</p></li>
+        <li><p><code>recognizer.py</code> · <b>analyze</b>: stages 1–4. <button type="button" class="go" data-go="5">slides 5–15</button>
+          <span class="sub">normalize → track_pitch [sliding_window_view → magnitude_spectrum → harmonic_product → refine_peaks] → hz_to_midi → estimate_detune → segment_notes → Analysis(times, frequencies, detune, notes)</span></p></li>
+        <li><p><code>recognizer.py</code> · <b>rank_songs</b>: stage 5, against <code>songs.OCARINA_SONGS</code>. It returns a <code>SongMatch(name, error, start, transpose)</code> per song, best first. <button type="button" class="go" data-go="16">slide 16</button></p></li>
+        <li><p><code>cli.py</code> prints the report, <code>synth.render</code> + <code>audio.play</code> answer on the ocarina, and <code>plot.save_report</code> draws five panels, reusing <code>magnitude_spectrum</code> and <code>harmonic_product</code>.</p></li>
+      </ol>
+    </div>
+    <div class="files">
+      <div class="file core"><b>recognizer.py</b><span>Everything in this talk. <code>DetectorConfig</code>, a frozen dataclass, holds every constant: 40 ms frames, 10 ms hop, ×4 padding, 80–1,200 Hz, 3 harmonics, the 10% floor, 80 ms notes, 30 ms rests.</span></div>
+      <div class="file"><b>songs.py</b><span>The five-note scale and the 12 songs as tuples of MIDI numbers, plus <code>note_name</code> and <code>find_song("storms")</code>.</span></div>
+      <div class="file"><b>synth.py</b><span><code>render()</code> sums harmonics under an envelope: an ocarina for playback and a hum for tests. <code>write_wav</code> saves it.</span></div>
+      <div class="file"><b>audio.py</b><span>Mic and speakers. <code>sounddevice</code> is imported lazily, so everything else works without PortAudio, and the tests swap in a fake.</span></div>
+      <div class="file"><b>plot.py</b><span>The five-panel matplotlib report you'll see in the demo.</span></div>
+      <div class="file"><b>cli.py</b><span>The <code>ocarina</code> command (listen, identify, play, songs, synth, devices, slides) and the live meter.</span></div>
+      <div class="file" style="grid-column: 1 / -1"><b>tests/</b><span>24 song tests: hum each song 9.6 semitones down (40 cents sharp) and it must match; hum it backwards and it must not. Plus CLI tests that run <code>listen</code> against a fake microphone.</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- 19 -->
+<section class="slide" data-part="talk" data-budget="45" data-notes="One real recording, the bundled example, through every stage. 130 thousand samples become 293 frames, 293 FFTs cost about 27 million operations, a few milliseconds, against 15 billion for direct DFTs. The tuning comes out 40 cents sharp, six notes come out, and it's Zelda's Lullaby, exact, an octave below the ocarina. Three ideas did all the work: a change of basis that diagonalizes shifts, a factorization that makes it fast, and the geometry of a line in note space. Now let's run it.">
+  <div class="inner single">
+    <div class="text">
+      <p class="eyebrow">Recap</p>
+      <h2>One real recording, start to finish</h2>
+      <p class="muted"><code>examples/zeldas-lullaby-hum.wav</code>, through every stage:</p>
+    </div>
+    <ol class="trail">
+      <li><span class="n">Input</span><b>130,536 samples</b><span>2.96 s at 44,100 Hz</span></li>
+      <li><span class="n">Frames</span><b>293 × ℝ¹⁷⁶⁴</b><span>258 loud enough to pitch</span></li>
+      <li><span class="n">Spectrum</span><b>293 rffts</b><span>7,200 points each: ≈ 27 M operations, a few ms. A direct DFT: 15 billion.</span></li>
+      <li><span class="n">Pitch</span><b>+40 ¢</b><span>one f₀ per frame; the singer is 40 cents sharp</span></li>
+      <li><span class="n">Notes</span><b>B3 D4 A3 B3 D4 A3</b><span>6 notes</span></li>
+      <li><span class="n">Song</span><b>Zelda's Lullaby</b><span>error 0.00, 12 semitones below. Next: Requiem, 1.83</span></li>
+    </ol>
+    <div class="ideas">
+      <div class="idea"><span class="n">DFT · slides 6–11</span><b>Change of basis</b><p>Dot products against sinusoids. \(F/\sqrt N\) is unitary, and its basis diagonalizes every shift, so pitch becomes a coordinate and timing drops out of \(|X|\).</p></div>
+      <div class="idea"><span class="n">FFT · slide 12</span><b>Factorization</b><p>F splits into \(\log N\) sparse butterfly stages: \(N\log N\) work instead of \(N^2\), about 560× less per frame.</p></div>
+      <div class="idea"><span class="n">Matching · slide 16</span><b>Geometry of melodies</b><p>A key change is a step along \(\mathbf 1\). The L1 distance to that line, minimized at the median, picks the song.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= PART 2: LIVE DEMO (10:00) ======================= -->
+
+<!-- 20 -->
+<section class="slide demo" data-part="demo" data-budget="30" data-notes="The timer has switched to the 10-minute demo clock. Everything from here runs in a terminal. Install once with uv tool install, so ocarina is on your PATH, and work in a scratch folder because the demos write WAV and PNG files. Bump the terminal font so the back row can read it, and on a Mac allow the terminal to use the microphone before you start.">
+  <div class="inner">
+    <div class="text">
+      <p class="eyebrow">Part 2 · live demo · 10 minutes</p>
+      <h2>Now the real tool, in a terminal</h2>
+      <ol class="agenda">
+        <li><button type="button" data-go="21"><span class="t">1:00</span>The instrument<span>songs, play</span></button></li>
+        <li><button type="button" data-go="22"><span class="t">1:30</span>A known input, end to end<span>synth, identify</span></button></li>
+        <li><button type="button" data-go="23"><span class="t">2:00</span>Read the report<span>five panels ↔ the slides</span></button></li>
+        <li><button type="button" data-go="24"><span class="t">2:00</span>Hum into the mic<span>listen</span></button></li>
+        <li><button type="button" data-go="25"><span class="t">2:00</span>Try to break it<span>detune, backwards, whistle</span></button></li>
+        <li><button type="button" data-go="26"><span class="t">1:00</span>Questions<span>+ in-browser fallback</span></button></li>
+      </ol>
+    </div>
+    <div class="panel">
+      <p class="lbl">Setup (before the talk)</p>
+      <div class="cmd"><code>cd ocarina-hum-matcher &amp;&amp; uv sync</code></div>
+      <div class="cmd"><code>uv tool install .   <span class="c"># puts `ocarina` on your PATH (or prefix each command with `uv run`)</span></code></div>
+      <div class="cmd"><code>mkdir -p ~/ocarina-demo &amp;&amp; cd ~/ocarina-demo</code></div>
+      <div class="cmd"><code>ocarina devices   <span class="c"># * marks the default mic; pass its index with --device</span></code></div>
+      <ul class="points">
+        <li>Terminal font at 20 pt or more, and a dark theme.</li>
+        <li>macOS: allow the terminal in System Settings › Privacy &amp; Security › Microphone, or recordings come back silent.</li>
+        <li>Speakers on: <code>listen</code> and <code>play</code> answer on the ocarina.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- 21 -->
+<section class="slide demo" data-part="demo" data-budget="60" data-notes="Start with the instrument. ocarina songs lists the twelve songs as notes from the five-note scale. ocarina play takes any unique fragment of a name and plays it on a synthesized ocarina, which is nearly a pure sine with a little second and third harmonic. If you like, show that an ambiguous fragment such as song is an error that lists the candidates.">
+  <div class="inner">
+    <div class="text">
+      <p class="eyebrow">Demo 1 · 1:00</p>
+      <h2>The instrument</h2>
+      <p class="lbl">Point at</p>
+      <ul class="points">
+        <li>Every song uses only the five notes D4 F4 A4 B4 D5, and is 5 to 8 notes long. That's the L on slide 16. <button type="button" class="go" data-go="16">16</button></li>
+        <li>Songs are data: tuples of MIDI numbers in <code>songs.py</code>.</li>
+        <li><code>play</code> resolves fragments: <code>lullaby</code>, <code>storms</code>, <code>bolero</code>. The synthesized ocarina is almost a pure sine, harmonics (1, 0.12, 0.04). <button type="button" class="go" data-go="3">3</button></li>
+      </ul>
+    </div>
+    <div class="panel">
+      <div class="cmd"><code>ocarina songs</code></div>
+      <pre class="out">Regular songs
+  Zelda's Lullaby      B4 D5 A4 B4 D5 A4
+  Epona's Song         D5 B4 A4 D5 B4 A4
+  …
+Warp (temple) songs
+  Minuet of Forest     D4 D5 B4 A4 B4 A4
+  …</pre>
+      <div class="cmd"><code>ocarina play lullaby</code></div>
+      <pre class="out">Zelda's Lullaby: B4 D5 A4 B4 D5 A4
+Playing Zelda's Lullaby on the ocarina...</pre>
+      <p class="cap">Optional: <code>ocarina play song</code> fails with exit code 2 and lists the 5 songs it could mean.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 22 -->
+<section class="slide demo" data-part="demo" data-budget="90" data-notes="Before trusting a microphone, test with an input whose answer we know. synth writes a hummed Song of Storms 10 semitones below the ocarina. identify runs the same analysis as listen on a WAV. Point out that the detected notes are E3 G3 E4 and not D4 F4 D5, yet the error is exactly zero: that's the key-shift line from slide 16. The Closest songs list is the bar chart from that slide. The exit code is 0 for a match, 1 for no match and 2 for an error, so it scripts well. This is exactly what the 24 song tests do.">
+  <div class="inner">
+    <div class="text">
+      <p class="eyebrow">Demo 2 · 1:30</p>
+      <h2>A known input, end to end</h2>
+      <p class="lbl">Point at</p>
+      <ul class="points">
+        <li>The notes are E3 G3 E4, not D4 F4 D5: the hum is 10 semitones lower, and the error is still 0.00. That's the key-shift line. <button type="button" class="go" data-go="16">16</button></li>
+        <li><code>tuning +0 cents</code>: synth hums exactly in tune. Demo 5 changes that. <button type="button" class="go" data-go="15">15</button></li>
+        <li>"Closest songs" is the bar chart from slide 16, and the runner-up is 2.33 away.</li>
+        <li>Exit codes: 0 means a match, 1 no match, 2 an error. The 24 song tests do exactly this, for every song, forwards and backwards.</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <div class="cmd"><code>ocarina synth storms storms.wav --transpose -10</code></div>
+      <div class="cmd"><code>ocarina identify storms.wav --play --plot report.png</code></div>
+      <pre class="out">Wrote Song of Storms (hum, transposed -10 semitones) to storms.wav
+Detected 6 notes: E3 G3 E4 E3 G3 E4   (tuning +0 cents)
+
+<b>Matched: Song of Storms</b>  (avg error 0.00 semitones; you sang 10.0 semitones below the ocarina)
+
+Closest songs:
+  Song of Storms        0.00  &lt;- match
+  Saria's Song          2.33
+  Sun's Song            2.33
+Saved the report to report.png
+Playing Song of Storms on the ocarina...</pre>
+      <div class="cmd"><code>echo $?</code></div>
+    </div>
+  </div>
+</section>
+
+<!-- 23 -->
+<section class="slide demo" data-part="demo" data-budget="120" data-notes="Open the report. The top panel is a spectrogram. For a CS audience: take slide 6's score curve for one frame, stand it up as a column, and put every frame's column side by side. Time goes right, frequency goes up, and brightness is the magnitude. Each hummed note is a stack of evenly spaced lines, its harmonics, and the blue dots and gold bars are what the recognizer decided. Then walk down the panels and jump back to the slide each one illustrates.">
+  <div class="inner">
+    <div class="text">
+      <p class="eyebrow">Demo 3 · 2:00</p>
+      <h2>Read the report: every panel is a slide</h2>
+      <div class="cmd"><code>open report.png   <span class="c"># Linux: xdg-open report.png · or rerun identify with --show</span></code></div>
+      <p>A <b>spectrogram</b> is slide 6's score curve for every frame, each stood up as a column and placed side by side: time goes right, frequency goes up, brightness is \(|X|\).</p>
+      <p class="muted">Each hummed note shows as a stack of evenly spaced lines, its harmonics at \(f_0, 2f_0, 3f_0\).</p>
+    </div>
+    <div class="tryit">
+      <div class="try"><h3>1 · Spectrogram, with the detected pitch and notes</h3><p>Harmonic stacks, blue dots for each frame's f₀, gold bars for the notes. <button type="button" class="go" data-go="5">5</button> <button type="button" class="go" data-go="6">6</button> <button type="button" class="go" data-go="15">15</button></p></div>
+      <div class="try"><h3>2 · Your notes vs Song of Storms</h3><p>The song shifted into your key, by the median offset. A wrong note would stand out. <button type="button" class="go" data-go="16">16</button></p></div>
+      <div class="try"><h3>3 · Every song's distance from your notes</h3><p>The L1 distance to each song's line, with the 0.5 tolerance. <button type="button" class="go" data-go="16">16</button></p></div>
+      <div class="try"><h3>4 · Average spectrum: recording vs the matched song</h3><p>Peaks line up at the song's notes. The hum has extra harmonics that the near-pure ocarina lacks. <button type="button" class="go" data-go="3">3</button> <button type="button" class="go" data-go="10">10</button></p></div>
+      <div class="try"><h3>5 · How one frame got its pitch</h3><p>One frame's spectrum and its harmonic product: only at f₀ do the 2f₀ and 3f₀ peaks line up. <button type="button" class="go" data-go="13">13</button></p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 24 -->
+<section class="slide demo" data-part="demo" data-budget="120" data-notes="Now live. Hum about two notes a second and leave a short gap between repeated notes. The meter shows the level, the current frame's note and how many cents off it is: that's stages 3 and 4 running on one frame. The notes list grows as you hum. Recording stops by itself the moment a song matches, because every half second the CLI reanalyzes everything so far. Then it plays the song back, the way Link repeats your tune. If the mic misbehaves, use the bundled recording or slide 26.">
+  <div class="inner">
+    <div class="text">
+      <p class="eyebrow">Demo 4 · 2:00</p>
+      <h2>Hum into the microphone</h2>
+      <p class="lbl">Point at</p>
+      <ul class="points">
+        <li>The live meter: the level, the current frame's note and how many cents off it is (stages 3 and 4 on one frame). <button type="button" class="go" data-go="15">15</button></li>
+        <li><code>notes:</code> grows as you hum, and recording stops by itself as soon as a song matches. Every 0.5 s it re-analyzes everything so far.</li>
+        <li>Then the ocarina answers, the way Link repeats your tune.</li>
+      </ul>
+      <p class="lbl">Tips</p>
+      <ul class="points">
+        <li>About two notes a second, with a short gap between repeated notes. Any key is fine.</li>
+        <li>If nothing is heard, run <code>ocarina devices</code>, then add <code>--device N</code>.</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <div class="cmd"><code>ocarina listen --plot live.png</code></div>
+      <pre class="out">Listening for up to 12 s. Hum, sing or whistle a song (Ctrl+C stops).
+   2.9s [██████····]  -24 dB    A3  +8¢   notes: B3 D4 A3 B3 D4 A3
+Recorded 3.0 s at 48000 Hz.
+
+Detected 6 notes: B3 D4 A3 B3 D4 A3   (tuning +8 cents)
+
+<b>Matched: Zelda's Lullaby</b>  (avg error 0.00 semitones; you sang 12.0 semitones below the ocarina)</pre>
+      <p class="lbl">Fallback: no mic, or too noisy</p>
+      <div class="cmd"><code>ocarina identify ~/path/to/ocarina-hum-matcher/examples/zeldas-lullaby-hum.wav --play</code></div>
+      <p class="cap">…or the in-browser version on slide 26.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 25 -->
+<section class="slide demo" data-part="demo" data-budget="120" data-notes="Try to break it, and for each attempt jump back to the slide that explains why it does or doesn't break. A: half a semitone off is the worst case for rounding, and the circular mean reports -50 cents and still finds every note. B: backwards uses the same notes in a different order, so the key shift can't fix it and it's rejected. C: whistling is nearly a pure sine, which is why the 10% floor exists. D: tolerance is a trade-off. 0.75 forgives more sloppiness, but at 1.0 Epona's Song backwards passes as Saria's Song. If time is short, do A and B.">
+  <div class="inner single">
+    <div class="text">
+      <p class="eyebrow">Demo 5 · 2:00</p>
+      <h2>Try to break it</h2>
+    </div>
+    <div class="grid2">
+      <div class="try">
+        <h3>A · Hum exactly half a semitone off <button type="button" class="go" data-go="15">15</button></h3>
+        <div class="cmd"><code>ocarina synth storms off.wav --transpose -9.5</code></div>
+        <div class="cmd"><code>ocarina identify off.wav</code></div>
+        <pre class="out">Detected 6 notes: F3 G#3 F4 F3 G#3 F4   (tuning -50 cents)
+<b>Matched: Song of Storms</b>  (… you sang 9.0 semitones below the ocarina)</pre>
+        <p>The worst case for rounding, but the circular mean finds the offset and every note survives.</p>
+      </div>
+      <div class="try">
+        <h3>B · Hum Zelda's Lullaby backwards <button type="button" class="go" data-go="16">16</button></h3>
+        <div class="cmd"><code>ocarina listen --no-play</code></div>
+        <pre class="out">No match within 0.5. Closest: … </pre>
+        <p>The same notes in reverse order. A key shift moves along \(\mathbf 1\), but this vector is far from the line. Exit code 1.</p>
+      </div>
+      <div class="try">
+        <h3>C · Whistle instead of humming <button type="button" class="go" data-go="13">13</button></h3>
+        <div class="cmd"><code>ocarina listen</code></div>
+        <p>A whistle is almost a pure sine with no harmonics, so the harmonic product rests on noise. The 10% energy floor is what keeps it on the right note.</p>
+      </div>
+      <div class="try">
+        <h3>D · Hum sloppily, then loosen the tolerance <button type="button" class="go" data-go="16">16</button></h3>
+        <div class="cmd"><code>ocarina listen --tolerance 0.75</code></div>
+        <p>It's a trade-off: at 1.0, Epona's Song backwards passes as Saria's Song (see the comment on <code>DEFAULT_TOLERANCE</code>).</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 26 -->
+<section class="slide demo" data-part="demo" data-budget="60" data-notes="Questions. If the terminal demo failed, or someone wants to try it on their own laptop, this page runs a JavaScript port of the same pipeline: 40 ms Hann frames, FFT, harmonic product, parabolic refinement, the detune correction, note segmentation and L1 matching. Audio never leaves the device.">
+  <div class="inner">
+    <div class="text">
+      <p class="eyebrow">Wrap-up</p>
+      <h2>Questions?</h2>
+      <ul class="points">
+        <li>Code: the <code>ocarina-hum-matcher</code> project. <code>recognizer.py</code> is the whole algorithm, about 300 lines.</li>
+        <li><code>uv run pytest</code> hums all 12 songs forwards and backwards, and drives <code>listen</code> with a fake microphone.</li>
+        <li>No terminal? This page runs a JavaScript port of the same pipeline: Hann frames, FFT, harmonic product, parabolic refinement, detune correction, note segmentation and L1 matching.</li>
+      </ul>
+      <p class="muted">If the microphone is blocked here, upload a recording (a phone voice memo works) or play the built-in example hum.</p>
+    </div>
+    <figure class="panel">
+      <div class="controls">
+        <button class="btn" id="listen" type="button">● Listen</button>
+        <button class="btn" id="upload-btn" type="button">Upload a recording</button>
+        <input type="file" id="upload" accept="audio/*" hidden>
+        <button class="btn" id="example" type="button">Play an example hum</button>
+      </div>
+      <p class="readout" id="live-status">Ready. Audio stays on this device; nothing is uploaded anywhere.</p>
+      <canvas id="trace" style="height:160px" aria-label="Detected pitch over time"></canvas>
+      <div class="chips" id="live-notes"></div>
+      <canvas id="live-rank" style="height:270px" aria-label="Error against every song"></canvas>
+      <div class="controls">
+        <p class="verdict" id="live-verdict">Nothing heard yet.</p>
+        <button class="btn" id="play-live" type="button" disabled>▶ Play matched song</button>
+      </div>
+    </figure>
+  </div>
+</section>
+
+<!-- 27 -->
+<section class="slide demo" data-part="demo" data-budget="0" data-notes="Reference only: every term used in the talk, with the slide that introduces it.">
+  <div class="inner single">
+    <div class="text">
+      <p class="eyebrow">Appendix</p>
+      <h2>Glossary</h2>
+    </div>
+    <dl class="gloss">
+      <div><dt><span>Signal</span> <button type="button" class="go" data-go="2">2</button></dt><dd>A quantity that changes over time; here, air pressure at the microphone.</dd></div>
+      <div><dt><span>Sample · sample rate \(f_s\)</span> <button type="button" class="go" data-go="2">2</button></dt><dd>One measurement of the signal; the number of samples per second (44,100).</dd></div>
+      <div><dt><span>Period · frequency · hertz</span> <button type="button" class="go" data-go="3">3</button></dt><dd>The time to repeat once, T; repeats per second, f = 1/T, measured in hertz (Hz).</dd></div>
+      <div><dt><span>Pitch · fundamental \(f_0\)</span> <button type="button" class="go" data-go="3">3</button></dt><dd>How high a sound is heard. For a repeating sound it is the repetition rate \(f_0 = 1/T\).</dd></div>
+      <div><dt><span>Harmonics</span> <button type="button" class="go" data-go="3">3</button></dt><dd>Sinusoids at \(f_0, 2f_0, 3f_0, \ldots\) that sum to a voice. They set timbre, not pitch.</dd></div>
+      <div><dt><span>Note · semitone · octave</span> <button type="button" class="go" data-go="3">3</button></dt><dd>A named pitch on the 12-tone scale (A4 = 440 Hz). Neighbours differ by a factor \(2^{1/12}\); 12 semitones double f.</dd></div>
+      <div><dt><span>Sinusoid · amplitude · phase</span> <button type="button" class="go" data-go="4">4</button></dt><dd>\(a\cos(2\pi f t + \varphi)\): its size a and its shift in time φ.</dd></div>
+      <div><dt><span>Time domain</span> <button type="button" class="go" data-go="4">4</button></dt><dd>The signal as its value at each instant: coordinates in the standard basis.</dd></div>
+      <div><dt><span>Frequency domain · spectrum</span> <button type="button" class="go" data-go="4">4</button></dt><dd>The signal as an amplitude and phase per frequency. The spectrum is the amplitudes against frequency.</dd></div>
+      <div><dt><span>Fourier transform</span> <button type="button" class="go" data-go="4">4</button></dt><dd>The invertible change of coordinates from the time domain to the frequency domain.</dd></div>
+      <div><dt><span>Frame · hop</span> <button type="button" class="go" data-go="5">5</button></dt><dd>A 40 ms slice of the recording (1,764 samples), taken every 10 ms.</dd></div>
+      <div><dt><span>Probe · inner product</span> <button type="button" class="go" data-go="6">6</button></dt><dd>A sampled sinusoid; its dot product with a frame measures how much of that frequency is present.</dd></div>
+      <div><dt><span>DFT · bin</span> <button type="button" class="go" data-go="7">7</button></dt><dd>\(X = Fx\) for N samples. \(X_k\) is bin k, at frequency \(k f_s/N\).</dd></div>
+      <div><dt><span>Orthogonal · unitary</span> <button type="button" class="go" data-go="7">7</button></dt><dd>Distinct rows of F have inner product 0. \(F^*F = N I\), so \(F/\sqrt N\) preserves length.</dd></div>
+      <div><dt><span>Periodic extension</span> <button type="button" class="go" data-go="8">8</button></dt><dd>The frame tiled end to end: the infinite signal the DFT implicitly analyses.</dd></div>
+      <div><dt><span>Aliasing</span> <button type="button" class="go" data-go="8">8</button></dt><dd>Frequencies k and k + N give identical samples, so they can't be told apart.</dd></div>
+      <div><dt><span>Circulant · convolution</span> <button type="button" class="go" data-go="9">9</button></dt><dd>A matrix whose rows are cyclic shifts of one row; multiplying by it is a cyclic convolution. F diagonalizes it.</dd></div>
+      <div><dt><span>DC · Nyquist · negative frequency</span> <button type="button" class="go" data-go="10">10</button></dt><dd>Bin 0 (zero frequency, N × the mean); bin N/2 = \(f_s/2\) for even N; bins above N/2 stand for k − N.</dd></div>
+      <div><dt><span>rfft</span> <button type="button" class="go" data-go="10">10</button></dt><dd>The DFT of a real input, returning only the \(\lfloor N/2\rfloor + 1\) bins that aren't mirror images.</dd></div>
+      <div><dt><span>Leakage · window · Hann</span> <button type="button" class="go" data-go="11">11</button></dt><dd>Energy spreading to other bins when the loop has a jump; a window fades the frame's ends; Hann is \(\tfrac12 - \tfrac12\cos\).</dd></div>
+      <div><dt><span>Decibel (dB)</span> <button type="button" class="go" data-go="11">11</button></dt><dd>\(20\log_{10}\) of an amplitude ratio: −20 dB is 10× smaller.</dd></div>
+      <div><dt><span>FFT · butterfly</span> <button type="button" class="go" data-go="12">12</button></dt><dd>Divide-and-conquer DFT in \(O(N\log N)\); a butterfly combines two half-size results.</dd></div>
+      <div><dt><span>Harmonic product spectrum</span> <button type="button" class="go" data-go="13">13</button></dt><dd>\(|X(f)|\,|X(2f)|\,|X(3f)|\): large only at the true \(f_0\).</dd></div>
+      <div><dt><span>Octave error</span> <button type="button" class="go" data-go="13">13</button></dt><dd>Reporting \(2f_0\) or \(f_0/2\) instead of \(f_0\).</dd></div>
+      <div><dt><span>Zero-padding</span> <button type="button" class="go" data-go="14">14</button></dt><dd>Appending zeros before the FFT: a finer frequency grid, no new information.</dd></div>
+      <div><dt><span>MIDI number · cent</span> <button type="button" class="go" data-go="15">15</button></dt><dd>\(m = 69 + 12\log_2(f/440)\), so a semitone is +1; a cent is 1/100 of a semitone.</dd></div>
+      <div><dt><span>Detune</span> <button type="button" class="go" data-go="15">15</button></dt><dd>The singer's constant offset from A440 tuning, in semitones, from −0.5 to 0.5.</dd></div>
+      <div><dt><span>Transposition · key</span> <button type="button" class="go" data-go="16">16</button></dt><dd>Shifting every note by the same amount: \(s - c\mathbf 1\).</dd></div>
+      <div><dt><span>Tolerance</span> <button type="button" class="go" data-go="16">16</button></dt><dd>The largest mean semitone error (0.5) that still counts as a match.</dd></div>
+    </dl>
+  </div>
+</section>
+
+</main>
+<p class="notes-box" id="notes-box" hidden></p>
+<nav class="bar" aria-label="Slide navigation">
+  <button type="button" id="prev" aria-label="Previous slide">←</button>
+  <span id="count">1 / 27</span>
+  <div class="progress" aria-hidden="true"><i id="prog"></i></div>
+  <button type="button" id="timer" title="Start or pause the timer (T)">Talk 00:00 / 20:00</button>
+  <button type="button" id="notes-btn" aria-pressed="false" class="hide-sm">Notes</button>
+  <button type="button" id="next" aria-label="Next slide">→</button>
+</nav>
+
+<script>
+"use strict";
+const TAU = 2 * Math.PI;
+const $ = (s) => document.querySelector(s);
+const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const rgb = (h) => h.match(/\w\w/g).map((x) => parseInt(x, 16));
+const mix = (a, b, t) => `rgb(${a.map((v, i) => Math.round(v + (b[i] - v) * t)).join(",")})`;
+const NAMES = ["C", "C♯", "D", "D♯", "E", "F", "F♯", "G", "G♯", "A", "A♯", "B"];
+const noteName = (m) => NAMES[((m % 12) + 12) % 12] + (Math.floor(m / 12) - 1);
+const midiHz = (m) => 440 * 2 ** ((m - 69) / 12);
+const SUB = "₀₁₂₃₄₅₆₇₈₉";
+const sub = (n) => String(n).replace(/\d/g, (d) => SUB[d]);
+const fmt = (n) => Math.round(n).toLocaleString("en-US");
+const signed = (v, digits = 1) => (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(digits);
+
+function rng(seed) {
+  return () => {
+    seed = (seed + 0x6d2b79f5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function prepare(cv) {
+  const r = cv.getBoundingClientRect(), d = window.devicePixelRatio || 1;
+  cv.width = Math.max(1, Math.round(r.width * d));
+  cv.height = Math.max(1, Math.round(r.height * d));
+  const c = cv.getContext("2d");
+  c.setTransform(d, 0, 0, d, 0, 0);
+  return [c, r.width, r.height];
+}
+
+function axes(c, w, h, o) {
+  const m = Object.assign({ l: 44, r: 12, t: 10, b: 24 }, o.m);
+  const X = (x) => m.l + ((x - o.x0) / (o.x1 - o.x0)) * (w - m.l - m.r);
+  const Y = (y) => h - m.b - ((y - o.y0) / (o.y1 - o.y0)) * (h - m.t - m.b);
+  c.lineWidth = 1;
+  c.font = '11px "IBM Plex Mono", ui-monospace, monospace';
+  c.strokeStyle = css("--grid");
+  c.fillStyle = css("--muted");
+  c.textAlign = "center"; c.textBaseline = "top";
+  for (const t of o.xt || []) {
+    c.beginPath(); c.moveTo(X(t), m.t); c.lineTo(X(t), h - m.b); c.stroke();
+    c.fillText((o.xf || String)(t), X(t), h - m.b + 6);
+  }
+  c.textAlign = "right"; c.textBaseline = "middle";
+  for (const t of o.yt || []) {
+    c.beginPath(); c.moveTo(m.l, Y(t)); c.lineTo(w - m.r, Y(t)); c.stroke();
+    c.fillText((o.yf || String)(t), m.l - 6, Y(t));
+  }
+  // Axis titles go on top of the data, on a small backing, once the chart is drawn.
+  const tag = (text, x, y) => {
+    const tw = c.measureText(text).width;
+    c.fillStyle = css("--panel"); c.fillRect(x - 3, y - 1, tw + 6, 15);
+    c.fillStyle = css("--muted"); c.textAlign = "left"; c.textBaseline = "top"; c.fillText(text, x, y);
+  };
+  queueMicrotask(() => {
+    c.font = '11px "IBM Plex Mono", ui-monospace, monospace';
+    if (o.xl) tag(o.xl, w - m.r - 4 - c.measureText(o.xl).width, h - m.b - 17);
+    if (o.yl) tag(o.yl, m.l + 4, m.t + 1);
+  });
+  return { X, Y, m };
+}
+
+function line(c, pts, color, width = 1.5, dash = []) {
+  c.strokeStyle = color; c.lineWidth = width; c.setLineDash(dash);
+  c.beginPath();
+  pts.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y)));
+  c.stroke(); c.setLineDash([]);
+}
+
+function arrow(c, x0, y0, x1, y1, color, width = 1.5) {
+  const a = Math.atan2(y1 - y0, x1 - x0), len = Math.hypot(x1 - x0, y1 - y0), hd = Math.min(8, len * 0.4);
+  line(c, [[x0, y0], [x1, y1]], color, width);
+  c.fillStyle = color; c.beginPath();
+  c.moveTo(x1, y1);
+  c.lineTo(x1 - hd * Math.cos(a - 0.4), y1 - hd * Math.sin(a - 0.4));
+  c.lineTo(x1 - hd * Math.cos(a + 0.4), y1 - hd * Math.sin(a + 0.4));
+  c.fill();
+}
+
+function dot(c, x, y, r, color) { c.fillStyle = color; c.beginPath(); c.arc(x, y, r, 0, TAU); c.fill(); }
+
+function label(c, text, x, y, color, align = "center", base = "bottom") {
+  c.fillStyle = color; c.textAlign = align; c.textBaseline = base;
+  c.font = '500 11.5px "IBM Plex Mono", ui-monospace, monospace';
+  c.fillText(text, x, y);
+}
+
+// Min/max of the samples under each pixel column, so long recordings draw fast and faithfully.
+function envelope(c, A, x, fs, t0, t1, color) {
+  const p0 = A.X(t0), p1 = A.X(t1), spp = ((t1 - t0) * fs) / (p1 - p0);
+  c.fillStyle = color;
+  for (let px = Math.floor(p0); px < p1; px++) {
+    const s0 = Math.max(0, Math.floor(t0 * fs + (px - p0) * spp)), s1 = Math.min(x.length, Math.max(s0 + 1, Math.floor(t0 * fs + (px + 1 - p0) * spp)));
+    let lo = Infinity, hi = -Infinity;
+    for (let s = s0; s < s1; s++) { lo = Math.min(lo, x[s]); hi = Math.max(hi, x[s]); }
+    if (hi >= lo) c.fillRect(px, A.Y(hi), 1, Math.max(1, A.Y(lo) - A.Y(hi)));
+  }
+}
+
+// Heat map of an N×N matrix; val(r, n) gives a value, color(v) its fill.
+function heat(c, w, h, N, val, color) {
+  const s = Math.min(h - 6, w - 6), cell = s / N, ox = (w - s) / 2, oy = 3;
+  for (let r = 0; r < N; r++) for (let n = 0; n < N; n++) {
+    c.fillStyle = color(val(r, n));
+    c.fillRect(ox + n * cell, oy + r * cell, Math.ceil(cell), Math.ceil(cell));
+  }
+  return { ox, oy, cell, s };
+}
+const diverging = () => {
+  const mid = rgb(css("--raise")), pos = rgb(css("--gold")), neg = rgb(css("--sky"));
+  return (v) => (v >= 0 ? mix(mid, pos, Math.min(1, v)) : mix(mid, neg, Math.min(1, -v)));
+};
+
+// Direct DFT of a complex vector: N² work, fine for the small N on the slides.
+function dftc(xr, xi) {
+  const N = xr.length, re = new Float64Array(N), im = new Float64Array(N);
+  for (let k = 0; k < N; k++) for (let n = 0; n < N; n++) {
+    const a = (-TAU * k * n) / N, co = Math.cos(a), si = Math.sin(a);
+    re[k] += xr[n] * co - xi[n] * si;
+    im[k] += xr[n] * si + xi[n] * co;
+  }
+  return [re, im];
+}
+
+// In-place radix-2 FFT (length must be a power of two).
+function fft(re, im) {
+  const n = re.length;
+  for (let i = 1, j = 0; i < n; i++) {
+    let bit = n >> 1;
+    for (; j & bit; bit >>= 1) j ^= bit;
+    j ^= bit;
+    if (i < j) { [re[i], re[j]] = [re[j], re[i]]; [im[i], im[j]] = [im[j], im[i]]; }
+  }
+  for (let len = 2; len <= n; len <<= 1) {
+    const ang = -TAU / len, wr = Math.cos(ang), wi = Math.sin(ang), half = len >> 1;
+    for (let i = 0; i < n; i += len) {
+      let cr = 1, ci = 0;
+      for (let k = 0; k < half; k++) {
+        const a = i + k, b = a + half;
+        const tr = re[b] * cr - im[b] * ci, ti = re[b] * ci + im[b] * cr;
+        re[b] = re[a] - tr; im[b] = im[a] - ti; re[a] += tr; im[a] += ti;
+        const nr = cr * wr - ci * wi; ci = cr * wi + ci * wr; cr = nr;
+      }
+    }
+  }
+}
+
+// Songbook, identical to songs.py
+const SCALE = { D4: 62, F4: 65, A4: 69, B4: 71, D5: 74 };
+const SHEET = {
+  "Zelda's Lullaby": "B4 D5 A4 B4 D5 A4",
+  "Epona's Song": "D5 B4 A4 D5 B4 A4",
+  "Saria's Song": "F4 A4 B4 F4 A4 B4",
+  "Sun's Song": "A4 F4 D5 A4 F4 D5",
+  "Song of Time": "A4 D4 F4 A4 D4 F4",
+  "Song of Storms": "D4 F4 D5 D4 F4 D5",
+  "Minuet of Forest": "D4 D5 B4 A4 B4 A4",
+  "Bolero of Fire": "F4 D4 F4 D4 A4 F4 A4 F4",
+  "Serenade of Water": "D4 F4 A4 A4 B4",
+  "Nocturne of Shadow": "B4 A4 A4 D4 B4 A4 F4",
+  "Requiem of Spirit": "D4 F4 D4 A4 F4 D4",
+  "Prelude of Light": "D5 A4 D5 A4 B4 D5",
+};
+const SONGS = Object.fromEntries(Object.entries(SHEET).map(([k, v]) => [k, v.split(" ").map((n) => SCALE[n])]));
+const TOLERANCE = 0.5;
+
+// ---------- audio
+let audio = null;
+function ensureAudio() {
+  try {
+    audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+    audio.resume();
+    return audio;
+  } catch (e) { return null; }
+}
+// One note: a sum of harmonics (`partials` are their amplitudes) under a short attack/release.
+function voice(f, start, dur, partials, peak) {
+  const g = audio.createGain();
+  g.gain.setValueAtTime(0, start);
+  g.gain.linearRampToValueAtTime(peak, start + 0.02);
+  g.gain.setValueAtTime(peak, start + dur - 0.06);
+  g.gain.linearRampToValueAtTime(0, start + dur);
+  g.connect(audio.destination);
+  partials.forEach((a, h) => {
+    if (!a) return;
+    const o = audio.createOscillator(), og = audio.createGain();
+    o.frequency.value = f * (h + 1); og.gain.value = a;
+    o.connect(og).connect(g); o.start(start); o.stop(start + dur + 0.02);
+  });
+}
+function play(notes) {
+  if (!ensureAudio()) return 0;
+  const dur = 0.36, gap = 0.07, t0 = audio.currentTime + 0.05;
+  notes.forEach((m, i) => voice(midiHz(m), t0 + i * (dur + gap), dur, [1, 0.3, 0.12], 0.16));
+  return notes.length * (dur + gap);
+}
+function playBuffer(x, fs) {
+  if (!ensureAudio()) return 0;
+  const b = audio.createBuffer(1, x.length, fs), s = audio.createBufferSource();
+  b.copyToChannel(x, 0);
+  s.buffer = b;
+  s.connect(audio.destination);
+  s.start();
+  return x.length / fs;
+}
+
+// A hum: harmonics 1, ½, ¼, ⅛ with a little vibrato, a rest between notes and a little noise.
+function synthHum(mel, { fs = 44100, transpose = -12, note = 0.36, rest = 0.1, seed = 1 } = {}) {
+  const r = rng(seed), noteLen = Math.round(note * fs), restLen = Math.round(rest * fs);
+  const x = new Float32Array(restLen + mel.length * (noteLen + restLen)), spans = [];
+  mel.forEach((m, i) => {
+    const f0 = midiHz(m + transpose), off = restLen + i * (noteLen + restLen);
+    for (let n = 0; n < noteLen; n++) {
+      const t = n / fs, env = Math.min(1, t / 0.02, (noteLen - n) / fs / 0.03);
+      const ph = TAU * f0 * t + 0.3 * Math.sin(TAU * 5 * t);
+      x[off + n] = 0.45 * env * (Math.sin(ph) + 0.5 * Math.sin(2 * ph) + 0.25 * Math.sin(3 * ph) + 0.12 * Math.sin(4 * ph));
+    }
+    spans.push({ m: Math.round(m + transpose), start: off / fs, end: (off + noteLen) / fs });
+  });
+  for (let i = 0; i < x.length; i++) x[i] += (r() - 0.5) * 0.01;
+  return { x, fs, spans };
+}
+const LULLABY = synthHum(SONGS["Zelda's Lullaby"], { transpose: -12, seed: 5 });
+
+// ---------- 1: staff
+let playhead = -1;
+function drawStaff() {
+  const [c, w, h] = prepare($("#staff"));
+  const staff = [62, 65, 69, 71, 74], mel = SONGS["Zelda's Lullaby"];
+  const left = 52, right = w - 18, top = 26, bottom = h - 34;
+  const y = (m) => bottom - staff.indexOf(m) * ((bottom - top) / 4);
+  staff.forEach((m) => {
+    line(c, [[left, y(m)], [right, y(m)]], css("--line"), 1.5);
+    label(c, noteName(m), left - 10, y(m), css("--muted"), "right", "middle");
+  });
+  const step = (right - left) / mel.length;
+  mel.forEach((m, i) => {
+    const x = left + step * (i + 0.5), lit = playhead >= 0 && Math.floor(playhead * mel.length) === i;
+    dot(c, x, y(m), lit ? 12 : 10, lit ? css("--sky") : css("--gold"));
+    label(c, noteName(m), x, h - 8, lit ? css("--sky") : css("--muted"));
+  });
+  if (playhead >= 0) line(c, [[left + playhead * (right - left), top - 14], [left + playhead * (right - left), bottom + 10]], css("--sky"), 1.5);
+}
+$("#play-lullaby").addEventListener("click", () => {
+  const total = play(SONGS["Zelda's Lullaby"]);
+  if (!total) return;
+  const t0 = performance.now();
+  const tick = (t) => {
+    playhead = (t - t0) / 1000 / total;
+    if (playhead >= 1) playhead = -1;
+    drawStaff();
+    if (playhead >= 0) requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+});
+
+// ---------- 2: the raw array
+function drawRaw() {
+  const { x, fs } = LULLABY, dur = x.length / fs;
+  const [c, w, h] = prepare($("#raw"));
+  const A = axes(c, w, h, { x0: 0, x1: dur, y0: -1, y1: 1, xt: [0, 0.5, 1, 1.5, 2, 2.5], yt: [-1, 0, 1], xl: "seconds", yl: "pressure", m: { l: 30 } });
+  envelope(c, A, x, fs, 0, dur, css("--sky"));
+  const first = Array.from(x.slice(Math.round(0.3 * fs), Math.round(0.3 * fs) + 4), (v) => v.toFixed(3)).join(", ");
+  $("#raw-out").innerHTML = `${dur.toFixed(2)} s × 44,100 samples/s = <b>${fmt(x.length)}</b> floats: [${first}, …]`;
+}
+$("#play-raw").addEventListener("click", () => playBuffer(LULLABY.x, LULLABY.fs));
+
+// ---------- 3: pitch is repetition
+const HUM_AMPS = [1, 0.5, 0.25, 0.125];
+let s3note = 62;
+const s3harm = [true, true, true, false];
+const gcd = (a, b) => (b ? gcd(b, a % b) : a);
+function drawPitch() {
+  const f0 = midiHz(s3note), amps = HUM_AMPS.map((a, i) => (s3harm[i] ? a : 0));
+  const on = amps.map((a, i) => (a ? i + 1 : 0)).filter(Boolean), g = on.reduce(gcd, 0);
+  const norm = amps.reduce((s, a) => s + a, 0) || 1;
+  let [c, w, h] = prepare($("#wave"));
+  let A = axes(c, w, h, { x0: 0, x1: 10, y0: -1.1, y1: 1.1, xt: [0, 2, 4, 6, 8, 10], yt: [-1, 0, 1], xl: "milliseconds", m: { l: 30 } });
+  if (on.length) {
+    const P = 1000 / (g * f0);
+    for (let t = P; t < 10; t += P) line(c, [[A.X(t), A.Y(-1.1)], [A.X(t), A.Y(1.1)]], css("--gold"), 1, [3, 4]);
+    const pts = [];
+    for (let i = 0; i <= 700; i++) {
+      const t = (i / 700) * 0.01;
+      let v = 0;
+      amps.forEach((a, k) => (v += a * Math.sin(TAU * (k + 1) * f0 * t)));
+      pts.push([A.X(t * 1000), A.Y(v / norm)]);
+    }
+    line(c, pts, css("--sky"), 2);
+  } else {
+    label(c, "Turn on at least one harmonic", w / 2, h / 2, css("--muted"), "center", "middle");
+  }
+  [c, w, h] = prepare($("#recipe"));
+  const x1 = Math.max(1300, Math.ceil((4.6 * f0) / 500) * 500), step = x1 > 1500 ? 500 : 250;
+  A = axes(c, w, h, { x0: 0, x1, y0: 0, y1: 1.25, xt: Array.from({ length: x1 / step + 1 }, (_, i) => i * step), yt: [0, 0.5, 1], xl: "Hz", yl: "amplitude", m: { l: 36 } });
+  HUM_AMPS.forEach((a, i) => {
+    const f = (i + 1) * f0, X = A.X(f), lit = s3harm[i];
+    if (lit) { c.fillStyle = css("--gold"); c.fillRect(X - 4, A.Y(a), 8, A.Y(0) - A.Y(a)); }
+    else { c.strokeStyle = css("--line"); c.lineWidth = 1.5; c.strokeRect(X - 4, A.Y(a), 8, A.Y(0) - A.Y(a)); }
+    label(c, i ? `${i + 1}f₀` : "f₀", X, A.Y(a) - 4, lit ? css("--text") : css("--muted"));
+  });
+  if (!on.length) { $("#pitch-out").innerHTML = "Silence: no harmonics on."; return; }
+  const P = 1000 / (g * f0), heard = Math.round(s3note + 12 * Math.log2(g));
+  const why = g === 1
+    ? (s3harm[0] ? "" : ` <span class="good">even with no f₀ component</span>`)
+    : ` <span class="bad">${g === 2 ? "an octave" : g === 4 ? "two octaves" : "an octave and a fifth"} too high</span>`;
+  $("#pitch-out").innerHTML = `f₀ = <b>${f0.toFixed(1)} Hz</b> (${noteName(s3note)}) · the sum repeats every <b>${P.toFixed(2)} ms</b> · heard as <b class="${g === 1 ? "good" : "bad"}">${noteName(heard)}</b>${why}`;
+}
+document.querySelectorAll("[data-harm]").forEach((b) => b.addEventListener("click", () => {
+  const i = +b.dataset.harm;
+  s3harm[i] = !s3harm[i];
+  b.setAttribute("aria-pressed", s3harm[i]);
+  drawPitch();
+}));
+$("#play-pitch").addEventListener("click", () => {
+  if (!ensureAudio()) return;
+  const amps = HUM_AMPS.map((a, i) => (s3harm[i] ? a : 0)), total = amps.reduce((s, a) => s + a, 0);
+  if (total) voice(midiHz(s3note), audio.currentTime + 0.05, 1.2, amps.map((a) => a / total), 0.22);
+});
+
+// ---------- 4: time domain vs frequency domain
+function drawDomains() {
+  const f0 = 220, amps = [1, 0.5, 0.25], deg = [0, +$("#ph2").value, +$("#ph3").value];
+  const ph = deg.map((d) => (d * Math.PI) / 180), T = 0.01;
+  $("#ph2-out").value = `${deg[1]}°`; $("#ph3-out").value = `${deg[2]}°`;
+  const comp = (h, t) => amps[h] * Math.cos(TAU * (h + 1) * f0 * t + ph[h]);
+  const sum = (t) => (comp(0, t) + comp(1, t) + comp(2, t)) / 1.75;
+  let [c, w, h] = prepare($("#dom-time"));
+  const ml = 58, mr = 10, X = (t) => ml + (t / T) * (w - ml - mr);
+  const lanes = [
+    ["x(t)", h * 0.2, h * 0.17, sum, css("--sky"), 2.2],
+    ["= f₀", h * 0.52, h * 0.085, (t) => comp(0, t), css("--gold"), 1.6],
+    ["+ 2f₀", h * 0.7, h * 0.085, (t) => comp(1, t), css("--gold"), 1.6],
+    ["+ 3f₀", h * 0.88, h * 0.085, (t) => comp(2, t), css("--gold"), 1.6],
+  ];
+  lanes.forEach(([name, cy, amp, f, color, width]) => {
+    line(c, [[ml, cy], [w - mr, cy]], css("--grid"), 1);
+    line(c, Array.from({ length: 500 }, (_, i) => { const t = (i / 499) * T; return [X(t), cy - amp * f(t)]; }), color, width);
+    label(c, name, ml - 10, cy, css("--text"), "right", "middle");
+  });
+  label(c, "time →  10 ms shown", w - mr, h - 2, css("--muted"), "right", "bottom");
+  let peak = 0;
+  for (let i = 0; i < 2000; i++) peak = Math.max(peak, Math.abs(sum((i / 2000) / f0)));
+
+  [c, w, h] = prepare($("#dom-freq"));
+  const A = axes(c, w, h, { x0: 0, x1: 1000, y0: 0, y1: 1.15, xt: [0, 200, 400, 600, 800, 1000], yt: [0, 0.5, 1], xl: "frequency (Hz)", yl: "amplitude", m: { l: 40, t: 34 } });
+  amps.forEach((a, k) => {
+    const x = A.X((k + 1) * f0);
+    c.fillStyle = css("--gold"); c.fillRect(x - 5, A.Y(a), 10, A.Y(0) - A.Y(a));
+    c.strokeStyle = css("--line"); c.lineWidth = 1.2; c.beginPath(); c.arc(x, 15, 10, 0, TAU); c.stroke();
+    arrow(c, x, 15, x + 9 * Math.cos(ph[k]), 15 - 9 * Math.sin(ph[k]), css("--sky"), 1.6);
+    label(c, `${deg[k]}°`, x + 14, 15, css("--muted"), "left", "middle");
+  });
+  $("#dom-out").innerHTML = `amplitudes at 220 · 440 · 660 Hz: <b>1.00 · 0.50 · 0.25</b>, unchanged · phases ${deg.map((d) => d + "°").join(" · ")}<br>waveform peak <b>${peak.toFixed(2)}</b> (1.00 when all phases are 0°): the shape changed, the pitch (220 Hz, A3) did not`;
+}
+
+// ---------- 5: frames
+function drawFrames() {
+  const { x, fs, spans } = LULLABY, N = 1764, hop = 441, dur = x.length / fs;
+  const total = Math.floor((x.length - N) / hop) + 1;
+  const k = Math.min(total - 1, Math.round(+$("#t4").value / 0.01)), s0 = k * hop, t0 = s0 / fs, t1 = (s0 + N) / fs;
+  $("#t4-out").value = `${t0.toFixed(2)} s`;
+  const z0 = Math.max(0, t0 - 0.04), z1 = Math.min(dur, z0 + 0.14);
+
+  let [c, w, h] = prepare($("#frames-all"));
+  let A = axes(c, w, h, { x0: 0, x1: dur, y0: -1, y1: 1, xt: [0, 0.5, 1, 1.5, 2, 2.5], xl: "seconds", m: { l: 12 } });
+  c.fillStyle = css("--sky-soft");
+  c.fillRect(A.X(z0), A.m.t, A.X(z1) - A.X(z0), h - A.m.t - A.m.b);
+  envelope(c, A, x, fs, 0, dur, css("--sky"));
+  c.fillStyle = css("--gold");
+  c.fillRect(A.X(t0), A.m.t, Math.max(2, A.X(t1) - A.X(t0)), h - A.m.t - A.m.b);
+
+  [c, w, h] = prepare($("#frames-zoom"));
+  const ms0 = z0 * 1000, ms1 = z1 * 1000, xt = [];
+  for (let t = Math.ceil(ms0 / 20) * 20; t <= ms1; t += 20) xt.push(t);
+  A = axes(c, w, h, { x0: ms0, x1: ms1, y0: -1, y1: 1.6, xt, xl: "ms", m: { l: 12, t: 4 } });
+  c.fillStyle = css("--gold-soft");
+  c.fillRect(A.X(t0 * 1000), A.Y(1), A.X(t1 * 1000) - A.X(t0 * 1000), A.Y(-1) - A.Y(1));
+  // The current frame and its neighbours, 10 ms apart, staggered into lanes so the overlap shows.
+  for (let j = -4; j <= 4; j++) {
+    const kk = k + j;
+    if (kk < 0 || kk >= total) continue;
+    const a = Math.max(ms0, ((kk * hop) / fs) * 1000), b = Math.min(ms1, (((kk * hop) + N) / fs) * 1000);
+    const y = A.Y(1.52) + (((j % 3) + 3) % 3) * 8;
+    line(c, [[A.X(a), y], [A.X(b), y]], j ? css("--line") : css("--gold"), j ? 3 : 5);
+  }
+  const pts = [];
+  for (let n = Math.floor(z0 * fs); n < Math.min(x.length, z1 * fs); n += 2) pts.push([A.X((n / fs) * 1000), A.Y(x[n] / 0.9)]);
+  line(c, pts, css("--sky"), 1.1);
+  const mid = (t0 + t1) / 2, span = spans.find((s) => mid >= s.start && mid <= s.end);
+  $("#frames-out").innerHTML = `frame <b>${k + 1}</b> of ${total} · ${t0.toFixed(2)}–${t1.toFixed(2)} s · samples ${fmt(s0)} … ${fmt(s0 + N - 1)} · a vector in ℝ¹⁷⁶⁴ · inside it: <b class="${span ? "good" : ""}">${span ? noteName(span.m) : "a rest (silence)"}</b>`;
+}
+
+// ---------- 6: one probe, one dot product
+const PR = (() => {
+  const fs = 44100, N = 1764, f0 = 146.83, amps = [1, 0.5, 0.25], ph = [0.6, 2.1, 4.0];
+  const x = Float64Array.from({ length: N }, (_, n) => amps.reduce((s, a, h) => s + a * Math.sin((TAU * (h + 1) * f0 * n) / fs + ph[h]), 0) / 1.75);
+  return { fs, N, f0, x, curve: null, max: 1 };
+})();
+function probe(f) {
+  let re = 0, im = 0;
+  for (let n = 0; n < PR.N; n++) { const a = (TAU * f * n) / PR.fs; re += PR.x[n] * Math.cos(a); im -= PR.x[n] * Math.sin(a); }
+  return [re, im];
+}
+function drawProbe() {
+  if (!PR.curve) {
+    PR.curve = [];
+    for (let f = 60; f <= 700; f++) { const [r, i] = probe(f); PR.curve.push([f, Math.hypot(r, i)]); }
+    PR.max = Math.max(...PR.curve.map((p) => p[1]));
+  }
+  const f = +$("#pf").value, [re, im] = probe(f), score = Math.hypot(re, im), pct = (100 * score) / PR.max;
+  $("#pf-out").value = `${f} Hz`;
+  const ms = (n) => (n / PR.fs) * 1000, cosP = (n) => Math.cos((TAU * f * n) / PR.fs);
+
+  let [c, w, h] = prepare($("#probe-sig"));
+  let A = axes(c, w, h, { x0: 0, x1: 40, y0: -1.2, y1: 1.2, xt: [0, 10, 20, 30, 40], yt: [-1, 0, 1], xl: "ms", m: { l: 30 } });
+  line(c, Array.from({ length: PR.N / 2 }, (_, i) => [A.X(ms(2 * i)), A.Y(cosP(2 * i))]), css("--gold"), 1.2);
+  line(c, Array.from({ length: PR.N / 2 }, (_, i) => [A.X(ms(2 * i)), A.Y(PR.x[2 * i])]), css("--sky"), 1.8);
+
+  [c, w, h] = prepare($("#probe-prod"));
+  A = axes(c, w, h, { x0: 0, x1: 40, y0: -1, y1: 1, xt: [0, 10, 20, 30, 40], yt: [0], m: { l: 30, b: 18 } });
+  const pos = new Path2D(), neg = new Path2D();
+  for (let n = 0; n < PR.N; n++) {
+    const v = PR.x[n] * cosP(n), X = A.X(ms(n)), path = v >= 0 ? pos : neg;
+    path.moveTo(X, A.Y(0)); path.lineTo(X, A.Y(v));
+  }
+  c.lineWidth = 1;
+  c.strokeStyle = css("--gold"); c.stroke(pos);
+  c.strokeStyle = css("--sky"); c.stroke(neg);
+  label(c, `sum = ⟨x, cos⟩ = ${signed(re)}`, w - 14, 14, css("--text"), "right", "middle");
+
+  [c, w, h] = prepare($("#probe-score"));
+  A = axes(c, w, h, { x0: 60, x1: 700, y0: 0, y1: 1.15, xt: [100, 200, 300, 400, 500, 600, 700], yt: [0, 0.5, 1], xl: "probe frequency (Hz)", yl: "score", m: { l: 36 } });
+  line(c, PR.curve.map(([fq, v]) => [A.X(fq), A.Y(v / PR.max)]), css("--sky"), 1.5);
+  [[1, "f₀"], [2, "2f₀"], [3, "3f₀"]].forEach(([k, t]) => label(c, t, A.X(k * PR.f0), A.Y(1.12), css("--muted")));
+  line(c, [[A.X(f), A.Y(0)], [A.X(f), A.Y(1.15)]], css("--gold"), 1.5, [3, 3]);
+  dot(c, A.X(f), A.Y(score / PR.max), 5, css("--gold"));
+  $("#probe-out").innerHTML = `probe <b>${f} Hz</b> · ⟨x, cos⟩ = <b>${signed(re)}</b> · ⟨x, sin⟩ = <b>${signed(-im)}</b> · score = <b class="${pct > 40 ? "good" : ""}">${score.toFixed(1)}</b> (${pct.toFixed(0)}% of the biggest)`;
+}
+
+// ---------- 7: the DFT matrix and orthogonality
+function drawDFTM() {
+  const N = 16, j = +$("#dj").value, k = +$("#dk").value;
+  $("#dj-out").value = j; $("#dk-out").value = k;
+  let [c, w, h] = prepare($("#matrix"));
+  const col = diverging();
+  const m = heat(c, w, h, N, (r, n) => Math.cos((TAU * r * n) / N), col);
+  c.lineWidth = 2;
+  c.strokeStyle = css("--sky"); c.strokeRect(m.ox - 1, m.oy + k * m.cell - 1, m.s + 2, m.cell + 2);
+  c.strokeStyle = css("--text"); c.strokeRect(m.ox - 3, m.oy + j * m.cell - 3, m.s + 6, m.cell + 6);
+
+  [c, w, h] = prepare($("#row"));
+  const A = axes(c, w, h, { x0: -0.5, x1: N - 0.5, y0: -1.3, y1: 1.3, xt: [0, 4, 8, 12, 15], yt: [-1, 0, 1], xl: "n", m: { l: 30 } });
+  [[j, css("--text")], [k, css("--sky")]].forEach(([r, color]) => {
+    line(c, Array.from({ length: 200 }, (_, i) => { const n = (i / 199) * (N - 1); return [A.X(n), A.Y(Math.cos((TAU * r * n) / N))]; }), color, 1, [3, 3]);
+    for (let n = 0; n < N; n++) dot(c, A.X(n), A.Y(Math.cos((TAU * r * n) / N)), 3, color);
+  });
+  label(c, `Re row j = ${j}`, A.X(N - 0.5) - 2, 10, css("--text"), "right", "top");
+  label(c, `Re row k = ${k}`, A.X(N - 0.5) - 2, 24, css("--sky"), "right", "top");
+
+  [c, w, h] = prepare($("#phasor"));
+  const sc = Math.min((w - 24) / (N + 2.7), (h / 2 - 12) / 5.2), ox = 12 + 2.7 * sc, oy = h / 2;
+  line(c, [[0, oy], [w, oy]], css("--grid"), 1);
+  const a = rgb(css("--sky")), b = rgb(css("--gold"));
+  let x = 0, y = 0;
+  for (let n = 0; n < N; n++) {
+    const th = (TAU * (k - j) * n) / N, nx = x + Math.cos(th), ny = y + Math.sin(th);
+    arrow(c, ox + x * sc, oy - y * sc, ox + nx * sc, oy - ny * sc, mix(a, b, n / (N - 1)), 2);
+    x = nx; y = ny;
+  }
+  const zero = (v) => (Math.abs(v) < 1e-9 ? 0 : v);
+  x = zero(x); y = zero(y);
+  dot(c, ox, oy, 4, css("--text"));
+  label(c, "start = end", ox, oy + 14, css("--muted"), "left", "top");
+  $("#phasor-out").innerHTML = j === k
+    ? `j = k: every term is 1, so ⟨f${sub(j)}, f${sub(k)}⟩ = <b class="good">${N}</b>, the squared length of a row (hence F*F = N·I)`
+    : `k − j = ${k - j}: the walk closes, so ⟨f${sub(j)}, f${sub(k)}⟩ = <b class="good">${x.toFixed(2)} ${y < 0 ? "−" : "+"} ${Math.abs(y).toFixed(2)}i</b>: orthogonal`;
+}
+
+// ---------- 8: the DFT sees a loop
+function drawLoop() {
+  const N = 32, cyc = +$("#lc").value, whole = Math.abs(cyc - Math.round(cyc)) < 1e-9;
+  $("#lc-out").value = cyc.toFixed(2);
+  const x = Array.from({ length: N }, (_, n) => Math.cos((TAU * cyc * n) / N));
+  const jump = Math.abs(1 - Math.cos(TAU * cyc));
+  let [c, w, h] = prepare($("#loop-time"));
+  let A = axes(c, w, h, { x0: -N - 0.5, x1: 2 * N - 0.5, y0: -1.3, y1: 1.3, xt: [-N, 0, N, 2 * N], yt: [-1, 0, 1], xl: "n", m: { l: 30 } });
+  for (let r = -1; r <= 1; r++) {
+    line(c, x.map((v, n) => [A.X(n + r * N), A.Y(v)]), r ? css("--line") : css("--sky"), r ? 1.5 : 2);
+    if (r < 1) line(c, [[A.X(N - 1 + r * N), A.Y(x[N - 1])], [A.X(N + r * N), A.Y(x[0])]], whole ? css("--line") : css("--bad"), 2.5);
+  }
+  x.forEach((v, n) => dot(c, A.X(n), A.Y(v), 2.2, css("--sky")));
+  [-0.5, N - 0.5].forEach((s) => line(c, [[A.X(s), A.Y(-1.3)], [A.X(s), A.Y(1.3)]], css("--gold"), 1, [2, 3]));
+  label(c, "seam", A.X(N - 0.5) + 4, A.Y(1.3) + 2, css("--gold"), "left", "top");
+
+  const [Xr, Xi] = dftc(x, new Float64Array(N));
+  const mag = (k) => { const b = ((k % N) + N) % N; return Math.hypot(Xr[b], Xi[b]) / (N / 2); };
+  [c, w, h] = prepare($("#loop-freq"));
+  A = axes(c, w, h, { x0: -N - 0.5, x1: 2 * N - 0.5, y0: 0, y1: 1.2, xt: [-N, -N / 2, 0, N / 2, N, (3 * N) / 2], yt: [0, 0.5, 1], xl: "k", m: { l: 30, t: 26 } });
+  const bw = Math.max(1.5, (A.X(1) - A.X(0)) * 0.6);
+  for (let k = -N; k < 2 * N; k++) {
+    const v = Math.min(mag(k), 1.2);
+    c.fillStyle = k >= 0 && k < N ? css("--gold") : css("--line");
+    c.fillRect(A.X(k) - bw / 2, A.Y(v), bw, Math.max(1, A.Y(0) - A.Y(v)));
+  }
+  const bracket = (k0, k1, y, color) => line(c, [[A.X(k0), y + 6], [A.X(k0), y], [A.X(k1), y], [A.X(k1), y + 6]], color, 2);
+  bracket(-0.5, N - 0.5, 16, css("--gold"));
+  bracket(-N / 2 - 0.5, N / 2 - 0.5, 6, css("--sky"));
+  $("#loop-out").innerHTML = (whole
+    ? `<b class="good">${cyc} whole cycles</b>: the copies join smoothly, and all the energy is at k = ±${cyc} (and at every copy, k ± ${N})`
+    : `<b class="bad">${cyc.toFixed(2)} cycles</b>: a jump of ${jump.toFixed(2)} at every seam, and energy spreads to every bin: leakage (slide 11)`)
+    + `<br>X[k + ${N}] = X[k], so stored bins ${N / 2 + 1}…${N - 1} are the negative frequencies −${N / 2 - 1}…−1`;
+}
+
+// ---------- 9: circulants are diagonal in the Fourier basis
+let circKind = "shift";
+function circKernel(N) {
+  const c = new Float64Array(N);
+  if (circKind === "shift") c[1] = 1;
+  else if (circKind === "blur") { c[0] = 0.5; c[1] = 0.25; c[N - 1] = 0.25; }
+  else { const r = rng(11); for (let i = 0; i < N; i++) c[i] = (r() - 0.5) * (i < 5 ? 1.6 : 0.4); }
+  return c;
+}
+function drawCirc() {
+  const N = 16, cv = circKernel(N), C = (r, n) => cv[(r - n + N) % N];
+  // D = F C F⁻¹ with F⁻¹ = conj(F)/N, computed numerically to show it really is diagonal.
+  const Mr = [], Mi = [];
+  for (let r = 0; r < N; r++) {
+    Mr.push(new Float64Array(N)); Mi.push(new Float64Array(N));
+    for (let b = 0; b < N; b++) for (let n = 0; n < N; n++) {
+      const a = (TAU * n * b) / N, v = C(r, n) / N;
+      Mr[r][b] += v * Math.cos(a); Mi[r][b] += v * Math.sin(a);
+    }
+  }
+  const Dr = [], Di = [];
+  for (let a = 0; a < N; a++) {
+    Dr.push(new Float64Array(N)); Di.push(new Float64Array(N));
+    for (let b = 0; b < N; b++) for (let r = 0; r < N; r++) {
+      const ang = (-TAU * a * r) / N, fr = Math.cos(ang), fi = Math.sin(ang);
+      Dr[a][b] += fr * Mr[r][b] - fi * Mi[r][b];
+      Di[a][b] += fr * Mi[r][b] + fi * Mr[r][b];
+    }
+  }
+  let off = 0, dmax = 0;
+  for (let a = 0; a < N; a++) for (let b = 0; b < N; b++) {
+    const v = Math.hypot(Dr[a][b], Di[a][b]);
+    if (a === b) dmax = Math.max(dmax, v); else off = Math.max(off, v);
+  }
+  const cmax = Math.max(...Array.from(cv, Math.abs));
+  let [c, w, h] = prepare($("#circ"));
+  heat(c, w, h, N, (r, n) => C(r, n) / cmax, diverging());
+  [c, w, h] = prepare($("#circ-d"));
+  const mid = rgb(css("--raise")), gold = rgb(css("--gold"));
+  heat(c, w, h, N, (a, b) => Math.hypot(Dr[a][b], Di[a][b]) / dmax, (v) => mix(mid, gold, Math.min(1, v)));
+
+  [c, w, h] = prepare($("#eig"));
+  const R = Math.max(1.15, dmax * 1.1), cx = w / 2, cy = h / 2, sc = (h / 2 - 12) / R;
+  line(c, [[cx - R * sc, cy], [cx + R * sc, cy]], css("--grid"), 1);
+  line(c, [[cx, cy - R * sc], [cx, cy + R * sc]], css("--grid"), 1);
+  c.strokeStyle = css("--line"); c.lineWidth = 1.5; c.beginPath(); c.arc(cx, cy, sc, 0, TAU); c.stroke();
+  label(c, "|λ| = 1", cx + sc * 0.72 + 4, cy - sc * 0.72, css("--muted"), "left");
+  label(c, "eigenvalues λₖ = (Fc)ₖ", 10, 10, css("--muted"), "left", "top");
+  for (let a = 0; a < N; a++) dot(c, cx + Dr[a][a] * sc, cy - Di[a][a] * sc, 4, css("--gold"));
+  const say = {
+    shift: "every |λ| = 1: shifting only rotates phases, so |X| never changes",
+    blur: "real eigenvalues in [0, 1]: low frequencies kept, high ones damped. A blur is a low-pass filter",
+    random: "any circulant at all: the same F diagonalizes it",
+  }[circKind];
+  $("#circ-out").innerHTML = `largest off-diagonal |entry| of F C F⁻¹: <b class="good">${off.toExponential(1)}</b> · ${say}`;
+}
+
+// ---------- 10: what fft returns
+let layKind = "real", layShift = false;
+function drawLayout() {
+  const N = +$("#ln").value, lk = $("#lk");
+  lk.max = N - 1;
+  if (+lk.value > N - 1) lk.value = N - 1;
+  const k = +lk.value, even = N % 2 === 0, half = Math.floor(N / 2), phi = 0.7, real = layKind !== "complex";
+  $("#ln-out").value = N; $("#lk-out").value = k;
+  const xr = new Float64Array(N), xi = new Float64Array(N);
+  for (let n = 0; n < N; n++) {
+    const th = (TAU * k * n) / N + phi;
+    xr[n] = Math.cos(th) + (layKind === "offset" ? 0.6 : 0);
+    xi[n] = real ? 0 : Math.sin(th);
+  }
+  const [Xr, Xi] = dftc(xr, xi);
+  const roll = layShift ? half : 0;  // np.fft.fftshift is np.roll(X, N // 2)
+  const binAt = (slot) => (slot - roll + N) % N;
+  const region = (b) => (b === 0 ? "dc" : even && b === half ? "nyq" : b < N / 2 ? "pos" : "neg");
+  const freq = (b) => (b === 0 ? "0" : even && b === half ? `±${half}` : b < N / 2 ? `+${b}` : `−${N - b}`);
+  const COL = { dc: css("--text"), pos: css("--gold"), nyq: css("--good"), neg: css("--sky") };
+
+  const [c, w, h] = prepare($("#layout"));
+  const ml = 60, mr = 8, top = 40, bottom = h - 46, slot = (w - ml - mr) / N;
+  const Y = (v) => bottom - (v / 1.05) * (bottom - top);
+  c.font = '11px "IBM Plex Mono", ui-monospace, monospace';
+  [[0, "0"], [0.5, "N/2"], [1, "N"]].forEach(([v, t]) => {
+    line(c, [[ml, Y(v)], [w - mr, Y(v)]], css("--grid"), 1);
+    label(c, t, ml - 8, Y(v), css("--muted"), "right", "middle");
+  });
+  label(c, "phase", ml - 8, 18, css("--muted"), "right", "middle");
+  label(c, "bin", ml - 8, bottom + 13, css("--muted"), "right", "middle");
+  label(c, "cycles", ml - 8, bottom + 31, css("--muted"), "right", "middle");
+  for (let i = 0; i < N; i++) {
+    const b = binAt(i), mag = Math.hypot(Xr[b], Xi[b]) / N, cx = ml + slot * (i + 0.5), reg = region(b);
+    const bw = Math.min(26, slot * 0.6);
+    c.globalAlpha = real && b > half ? 0.4 : 1;
+    c.fillStyle = COL[reg];
+    c.fillRect(cx - bw / 2, Y(mag), bw, Math.max(1, bottom - Y(mag)));
+    c.strokeStyle = css("--line"); c.lineWidth = 1.2;
+    c.beginPath(); c.arc(cx, 18, 9, 0, TAU); c.stroke();
+    if (mag > 1e-6) { const ang = Math.atan2(Xi[b], Xr[b]); arrow(c, cx, 18, cx + 8 * Math.cos(ang), 18 - 8 * Math.sin(ang), COL[reg], 1.6); }
+    c.globalAlpha = 1;
+    label(c, String(b), cx, bottom + 6, css("--text"), "center", "top");
+    label(c, freq(b), cx, bottom + 24, COL[reg], "center", "top");
+  }
+  let mismatch = 0;
+  for (let b = 1; b < N; b++) mismatch = Math.max(mismatch, Math.hypot(Xr[N - b] - Xr[b], Xi[N - b] + Xi[b]));
+  const parts = [`bin 0 = DC`];
+  const posEnd = even ? half - 1 : half;
+  if (posEnd >= 1) parts.push(`bins 1–${posEnd} = +1…+${posEnd}`);
+  if (even) parts.push(`bin ${half} = Nyquist (±${half})`);
+  if (posEnd + 1 + (even ? 1 : 0) <= N - 1) parts.push(`bins ${even ? half + 1 : half + 1}–${N - 1} = −${even ? half - 1 : half}…−1`);
+  let lines = [`N = ${N} (${even ? "even" : "odd: no Nyquist bin"}): ${parts.join(" · ")} cycles per frame`];
+  lines.push(real
+    ? `real input → X[N−k] = conj X[k] <b class="good">✓</b> (max mismatch ${mismatch.toExponential(0)}) → <code>rfft</code> keeps bins 0…${half}: <b>${half + 1}</b> of ${N} numbers`
+    : `complex input → no mirror symmetry (mismatch ${mismatch.toFixed(1)}): you need all ${N} bins, so use <code>fft</code>, not <code>rfft</code>`);
+  if (layKind === "complex") lines.push(`e^{iωn} at k = ${k} lands in one bin of height N: one basis vector`);
+  else if (k === 0) lines.push(`k = 0: a constant, all in bin 0 (|X₀| = N × mean)`);
+  else if (even && k === half) lines.push(`k = N/2: cos(πn + φ) = cos φ·(−1)ⁿ. The sine part vanishes, so the Nyquist bin is real and the phase is lost`);
+  else if (k > N / 2) lines.push(`a cosine at ${k} cycles has the same samples as one at ${N - k}: aliasing`);
+  else lines.push(`a unit cosine splits into +${k} and −${k}: |X| = N/2 in each${layKind === "offset" ? ", and the offset adds N × 0.6 to bin 0" : ""}`);
+  $("#layout-out").innerHTML = lines.join("<br>");
+}
+
+// ---------- 11: leakage
+let leakWin = "rect";
+function drawLeak() {
+  const N = 64, cyc = +$("#cyc").value, hann = leakWin === "hann";
+  $("#cyc-out").value = cyc.toFixed(2);
+  const win = (n) => (hann ? 0.5 - 0.5 * Math.cos((TAU * n) / N) : 1);
+  const x = Array.from({ length: N }, (_, n) => Math.cos((TAU * cyc * n) / N) * win(n));
+
+  let [c, w, h] = prepare($("#leak-time"));
+  let A = axes(c, w, h, { x0: -0.5, x1: N + 13.5, y0: -1.25, y1: 1.25, yt: [-1, 0, 1], xt: [0, 16, 32, 48, 64], xl: "n", m: { l: 30, b: 20 } });
+  if (hann) {
+    line(c, Array.from({ length: N }, (_, n) => [A.X(n), A.Y(win(n))]), css("--muted"), 1, [3, 3]);
+    line(c, Array.from({ length: N }, (_, n) => [A.X(n), A.Y(-win(n))]), css("--muted"), 1, [3, 3]);
+  }
+  line(c, x.map((v, n) => [A.X(n), A.Y(v)]), css("--sky"), 1.5);
+  line(c, [[A.X(N - 1), A.Y(x[N - 1])], ...Array.from({ length: 14 }, (_, i) => [A.X(N + i), A.Y(x[i])])], css("--muted"), 1.5, [4, 3]);
+  line(c, [[A.X(N - 0.5), A.Y(-1.25)], [A.X(N - 0.5), A.Y(1.25)]], css("--gold"), 1, [2, 3]);
+  label(c, "the loop restarts", A.X(N - 0.5) + 4, A.Y(1.25) + 2, css("--gold"), "left", "top");
+
+  const at = (k) => { let r = 0, i = 0; for (let n = 0; n < N; n++) { r += x[n] * Math.cos((TAU * k * n) / N); i -= x[n] * Math.sin((TAU * k * n) / N); } return Math.hypot(r, i); };
+  const curve = Array.from({ length: 641 }, (_, i) => [i * 0.05, at(i * 0.05)]);
+  const bins = Array.from({ length: 33 }, (_, k) => at(k));
+  const ref = Math.max(...curve.map((p) => p[1])), db = (v) => Math.max(-90, 20 * Math.log10(Math.max(v / ref, 1e-9)));
+  [c, w, h] = prepare($("#leak"));
+  A = axes(c, w, h, { x0: -0.5, x1: 32.5, y0: -90, y1: 3, xt: [0, 8, 16, 24, 32], yt: [-80, -60, -40, -20, 0], xl: "bin k", yl: "dB" });
+  line(c, curve.map(([k, v]) => [A.X(k), A.Y(db(v))]), css("--muted"), 1, [3, 3]);
+  bins.forEach((v, k) => {
+    line(c, [[A.X(k), A.Y(-90)], [A.X(k), A.Y(db(v))]], css("--gold"), 2);
+    dot(c, A.X(k), A.Y(db(v)), 3, css("--gold"));
+  });
+  const total = bins.reduce((s, v) => s + v * v, 0);
+  const far = bins.reduce((s, v, k) => s + (Math.abs(k - cyc) > 2 ? v * v : 0), 0);
+  $("#leak-out").innerHTML = `Energy more than 2 bins from the true frequency: <b class="${far / total > 0.01 ? "bad" : "good"}">${((100 * far) / total).toFixed(far / total < 0.001 ? 4 : 2)}%</b><br>dashed: the frame's next loop, as the DFT sees it`;
+}
+
+// ---------- 12: FFT
+function drawButterfly() {
+  const [c, w, h] = prepare($("#bfly"));
+  const N = 8, rev = [0, 4, 2, 6, 1, 5, 3, 7], left = 42, right = w - 42, top = 12, bottom = h - 12;
+  const X = (s) => left + (s * (right - left)) / 3, Y = (i) => top + (i * (bottom - top)) / (N - 1);
+  for (let s = 1; s <= 3; s++) {
+    const half = 1 << (s - 1);
+    for (let g = 0; g < N; g += 2 * half) for (let i = 0; i < half; i++) {
+      const a = g + i, b = a + half, hot = s === 3 && i === 1;
+      const col = hot ? css("--gold") : css("--line"), lw = hot ? 2.5 : 1.3;
+      for (const [p, q] of [[a, a], [b, a], [a, b], [b, b]]) line(c, [[X(s - 1), Y(p)], [X(s), Y(q)]], col, lw);
+    }
+  }
+  for (let s = 0; s <= 3; s++) for (let i = 0; i < N; i++) dot(c, X(s), Y(i), 3.5, css("--sky"));
+  for (let i = 0; i < N; i++) {
+    label(c, "x" + sub(rev[i]), left - 10, Y(i), css("--text"), "right", "middle");
+    label(c, "X" + sub(i), right + 10, Y(i), css("--text"), "left", "middle");
+  }
+}
+function drawOps() {
+  const p = +$("#logn").value, N = 2 ** p, direct = N * N, fast = N * p;
+  $("#logn-out").value = p;
+  const [c, w, h] = prepare($("#ops"));
+  const A = axes(c, w, h, { x0: 0, x1: 10, y0: 0, y1: 2, xt: [0, 2, 4, 6, 8, 10], xf: (t) => (t ? "10" + String(t).replace(/\d/g, (d) => "⁰¹²³⁴⁵⁶⁷⁸⁹"[d]) : "1"), m: { l: 92, t: 4, b: 22 } });
+  [["Direct  N²", direct, css("--bad")], ["FFT  N log₂N", fast, css("--good")]].forEach(([name, v, col], i) => {
+    const yc = A.Y(1.5 - i), bh = (A.Y(0) - A.Y(1)) * 0.5;
+    c.fillStyle = col; c.fillRect(A.X(0), yc - bh / 2, A.X(Math.log10(v)) - A.X(0), bh);
+    label(c, name, A.m.l - 8, yc, css("--text"), "right", "middle");
+  });
+  $("#ops-out").innerHTML = `N = <b>${fmt(N)}</b>: direct <b>${fmt(direct)}</b> · FFT <b>${fmt(fast)}</b> · <b class="good">${fmt(direct / fast)}× fewer</b><br>Our N = 7,200: 52 M vs 92 k per frame, ≈ 560× fewer`;
+}
+
+// ---------- 13: harmonic product spectrum (same algorithm as recognizer.py)
+const FS = 44100, FRAME = 1764, NFFT = 8192, BIN = FS / NFFT;
+const HANN = Float64Array.from({ length: FRAME }, (_, n) => 0.5 - 0.5 * Math.cos((TAU * n) / (FRAME - 1)));
+const TONES = { hum: [1, 0.5, 0.25, 0.125], weak: [0.3, 1, 0.6, 0.3], whistle: [1] };
+let tone = "weak", floorOn = true;
+function refine(mag, k) {
+  const last = mag.length - 2;
+  for (let s = 0; s < 16; s++) {
+    k = Math.max(1, Math.min(last, k));
+    if (mag[k + 1] > Math.max(mag[k - 1], mag[k])) k++;
+    else if (mag[k - 1] > mag[k]) k--;
+    else break;
+  }
+  k = Math.max(1, Math.min(last, k));
+  const [a, b, g] = [mag[k - 1], mag[k], mag[k + 1]].map((v) => Math.log(v + 1e-12));
+  const curv = a - 2 * b + g;
+  return k + (curv < 0 ? (0.5 * (a - g)) / curv : 0);
+}
+function drawHPS() {
+  const f0 = +$("#f0").value, amps = TONES[tone], r = rng(7);
+  $("#f0-out").value = `${f0} Hz`;
+  const re = new Float64Array(NFFT), im = new Float64Array(NFFT);
+  for (let n = 0; n < FRAME; n++) {
+    let s = 0;
+    amps.forEach((a, h) => (s += a * Math.sin((TAU * (h + 1) * f0 * n) / FS)));
+    re[n] = (s + (r() - 0.5) * 0.01) * HANN[n];
+  }
+  fft(re, im);
+  const nb = NFFT / 2 + 1, mag = Float64Array.from({ length: nb }, (_, k) => Math.hypot(re[k], im[k]));
+  const nh = Math.floor(nb / 3), lo = Math.ceil(80 / BIN), hi = Math.floor(1200 / BIN);
+  let loud = 0, tall = lo, best = lo, bestV = -1;
+  for (let k = lo; k <= hi; k++) if (mag[k] > loud) { loud = mag[k]; tall = k; }
+  const geo = new Float64Array(nh);
+  for (let k = 1; k < nh; k++) geo[k] = Math.cbrt(mag[k] * mag[2 * k] * mag[3 * k]);
+  for (let k = lo; k <= hi; k++) if ((!floorOn || mag[k] >= 0.1 * loud) && geo[k] > bestV) { bestV = geo[k]; best = k; }
+  const fTall = refine(mag, tall) * BIN, fHps = refine(mag, best) * BIN;
+  const ok = (f) => Math.abs(1200 * Math.log2(f / f0)) < 50;
+  const kmax = Math.floor(1400 / BIN);
+
+  let [c, w, h] = prepare($("#hps-spec"));
+  let A = axes(c, w, h, { x0: 0, x1: 1400, y0: 0, y1: 1.08, xt: [0, 400, 800, 1200], yt: [0, 0.5, 1], xl: "Hz", yl: "|X|" });
+  if (floorOn) { line(c, [[A.X(80), A.Y(0.1)], [A.X(1200), A.Y(0.1)]], css("--gold"), 1, [4, 4]); label(c, "10% floor", A.X(1200), A.Y(0.1) - 3, css("--gold"), "right"); }
+  line(c, Array.from({ length: kmax }, (_, k) => [A.X(k * BIN), A.Y(mag[k] / loud)]), css("--sky"), 1.5);
+  const mark = (f, col, text, yv) => { line(c, [[A.X(f), A.Y(0)], [A.X(f), A.Y(yv)]], col, 1.5, [2, 3]); label(c, text, A.X(f) + 4, A.Y(yv * 0.85) + 12, col, "left"); };
+  mark(fTall, ok(fTall) ? css("--good") : css("--bad"), "tallest", 1.05);
+
+  [c, w, h] = prepare($("#hps-prod"));
+  A = axes(c, w, h, { x0: 0, x1: 1400, y0: 0, y1: 1.08, xt: [0, 400, 800, 1200], yt: [0, 0.5, 1], xl: "Hz", yl: "P^(1/3)" });
+  let gmax = 0;
+  for (let k = lo; k <= hi; k++) gmax = Math.max(gmax, geo[k]);
+  const lim = Math.min(kmax, nh);
+  line(c, Array.from({ length: lim }, (_, k) => [A.X(k * BIN), A.Y(Math.min(geo[k] / gmax, 1.08))]), css("--muted"), 1);
+  c.fillStyle = css("--gold");
+  for (let k = lo; k <= Math.min(hi, lim - 1); k++) if (!floorOn || mag[k] >= 0.1 * loud) c.fillRect(A.X(k * BIN) - 1, A.Y(Math.min(geo[k] / gmax, 1.08)) - 1, 2.5, 2.5);
+  mark(fHps, ok(fHps) ? css("--good") : css("--bad"), "HPS pick", 1.05);
+
+  const say = (f) => `<b class="${ok(f) ? "good" : "bad"}">${f.toFixed(1)} Hz (${noteName(Math.round(69 + 12 * Math.log2(f / 440)))}) ${ok(f) ? "✓" : "✗"}</b>`;
+  $("#hps-out").innerHTML = `True f₀ ${f0} Hz · tallest bin ${say(fTall)} · HPS ${say(fHps)}<br><span class="key" style="background:var(--gold)"></span>bins allowed to win (cube root of the product, for scale)`;
+}
+$("#floor").addEventListener("click", (e) => {
+  floorOn = !floorOn;
+  e.currentTarget.setAttribute("aria-pressed", floorOn);
+  e.currentTarget.textContent = `10% floor: ${floorOn ? "on" : "off"}`;
+  drawHPS();
+});
+
+// ---------- 14: resolution and the parabola
+let nfftPara = 1764;
+function drawPara() {
+  const ft = +$("#ftrue").value, d = FS / nfftPara;
+  $("#ftrue-out").value = `${ft.toFixed(1)} Hz`;
+  const sig = Float64Array.from({ length: FRAME }, (_, n) => Math.sin((TAU * ft * n) / FS) * HANN[n]);
+  const at = (f) => { let r = 0, i = 0; for (let n = 0; n < FRAME; n++) { r += sig[n] * Math.cos((TAU * f * n) / FS); i -= sig[n] * Math.sin((TAU * f * n) / FS); } return Math.hypot(r, i); };
+  let k = Math.round(ft / d);
+  for (let s = 0; s < 3; s++) { const l = at((k - 1) * d), m = at(k * d), r = at((k + 1) * d); if (r > Math.max(l, m)) k++; else if (l > m) k--; else break; }
+  const [a, b, g] = [k - 1, k, k + 1].map((i) => Math.log(at(i * d)));
+  const delta = (0.5 * (a - g)) / (a - 2 * b + g), est = (k + delta) * d;
+  const peak = at(ft), dB = (v) => 20 * Math.log10(Math.max(v / peak, 1e-9)), lnDB = (v) => (20 / Math.LN10) * v - 20 * Math.log10(peak);
+  const x0 = ft - 70, x1 = ft + 70;
+  const [c, w, h] = prepare($("#para"));
+  const base = Math.ceil(x0 / 20) * 20;
+  const A = axes(c, w, h, { x0, x1, y0: -45, y1: 3, xt: [base, base + 40, base + 80, base + 120].filter((t) => t <= x1), yt: [-40, -30, -20, -10, 0], xl: "Hz", yl: "dB" });
+  line(c, Array.from({ length: 141 }, (_, i) => { const f = x0 + i; return [A.X(f), A.Y(Math.max(-45, dB(at(f))))]; }), css("--muted"), 1, [3, 3]);
+  const av = (a - 2 * b + g) / 2, bv = b - av * delta * delta;
+  line(c, Array.from({ length: 61 }, (_, i) => { const u = -1.5 + i * 0.05; return [A.X((k + u) * d), A.Y(Math.max(-45, lnDB(av * (u - delta) ** 2 + bv)))]; }), css("--gold"), 2);
+  for (let i = Math.ceil(x0 / d); i * d <= x1; i++) {
+    const used = Math.abs(i - k) <= 1, v = dB(at(i * d));
+    if (v > -45) dot(c, A.X(i * d), A.Y(v), used ? 5 : 3, used ? css("--gold") : css("--text"));
+  }
+  const vline = (f, col, dash) => line(c, [[A.X(f), A.Y(-45)], [A.X(f), A.Y(3)]], col, 1.5, dash);
+  vline(ft, css("--sky"), []);
+  vline(k * d, css("--muted"), [2, 4]);
+  const cents = (f) => 1200 * Math.log2(f / ft);
+  $("#para-out").innerHTML = `Bin spacing <b>${d.toFixed(2)} Hz</b> · nearest bin <b class="${Math.abs(cents(k * d)) > 10 ? "bad" : ""}">${(k * d).toFixed(2)} Hz (${signed(cents(k * d))} ¢)</b> · parabola <b class="good">${est.toFixed(2)} Hz (${signed(cents(est))} ¢)</b><br><span class="key" style="background:var(--sky)"></span>true pitch <span class="key" style="background:var(--gold)"></span>the three bins and the parabola through them`;
+}
+
+// ---------- 15: tuning on the circle
+const HUMMED = [59, 62, 57, 59, 62, 57];
+function drawCircle() {
+  const cents = +$("#cents").value, r = rng(3);
+  $("#cents-out").value = `${cents > 0 ? "+" : cents < 0 ? "−" : ""}${Math.abs(cents)} ¢`;
+  const frames = HUMMED.flatMap((t) => Array.from({ length: 10 }, () => ({ t, m: t + cents / 100 + (r() - 0.5) * 0.24 })));
+  let zr = 0, zi = 0;
+  frames.forEach(({ m }) => { zr += Math.cos(TAU * m); zi += Math.sin(TAU * m); });
+  zr /= frames.length; zi /= frames.length;
+  const det = Math.atan2(zi, zr) / TAU;
+  let [c, w, h] = prepare($("#circle"));
+  const R = Math.min(h / 2 - 22, w / 2 - 80), cx = w / 2, cy = h / 2;
+  c.strokeStyle = css("--line"); c.lineWidth = 1.5; c.beginPath(); c.arc(cx, cy, R, 0, TAU); c.stroke();
+  line(c, [[cx - R - 6, cy], [cx + R + 6, cy]], css("--grid"), 1);
+  label(c, "in tune", cx + R + 8, cy, css("--muted"), "left", "middle");
+  label(c, "±50 ¢", cx - R - 8, cy, css("--muted"), "right", "middle");
+  label(c, "+25 ¢", cx, cy - R - 6, css("--muted"));
+  frames.forEach(({ m }) => dot(c, cx + R * Math.cos(TAU * m), cy - R * Math.sin(TAU * m), 3.5, css("--sky")));
+  arrow(c, cx, cy, cx + R * zr, cy - R * zi, css("--gold"), 3);
+  const wrongNaive = frames.filter((f) => Math.round(f.m) !== f.t).length, wrongFix = frames.filter((f) => Math.round(f.m - det) !== f.t).length;
+
+  [c, w, h] = prepare($("#strip"));
+  const left = 84, cw = (w - left - 4) / frames.length;
+  [["naive", (f) => Math.round(f.m) === f.t], ["corrected", (f) => Math.round(f.m - det) === f.t]].forEach(([name, good], row) => {
+    const y = 6 + row * 30;
+    label(c, name, left - 8, y + 11, css("--text"), "right", "middle");
+    frames.forEach((f, i) => { c.fillStyle = good(f) ? css("--good") : css("--bad"); c.fillRect(left + i * cw + 0.5, y, Math.max(1, cw - 1), 22); });
+  });
+  HUMMED.forEach((t, i) => label(c, noteName(t), left + (i * 10 + 5) * cw, h - 2, css("--muted")));
+  $("#circle-out").innerHTML = `Estimated detune <b>${signed(det * 100)} ¢</b> · wrong frames: naive <b class="${wrongNaive ? "bad" : "good"}">${wrongNaive}/60</b> · corrected <b class="${wrongFix ? "bad" : "good"}">${wrongFix}/60</b>`;
+}
+
+// ---------- 16: matching
+let variant = "lower";
+const median = (a) => { const s = [...a].sort((x, y) => x - y), m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
+function songError(notes, mel) {
+  let best = Infinity;
+  for (let i = 0; i + mel.length <= notes.length; i++) {
+    const d = mel.map((m, j) => notes[i + j] - m), c = median(d);
+    best = Math.min(best, d.reduce((s, v) => s + Math.abs(v - c), 0) / mel.length);
+  }
+  return best;
+}
+function hummedNotes() {
+  const s = SONGS[$("#song").value];
+  if (variant === "lower") return s.map((m) => m - 10);
+  if (variant === "slip") return s.map((m, i) => (i === 2 ? m + 2 : m));
+  if (variant === "back") return [...s].reverse();
+  return [...s];
+}
+function drawRanking(cv, notes, target) {
+  const rows = Object.keys(SONGS).map((name) => ({ name, e: songError(notes, SONGS[name]), len: SONGS[name].length }));
+  const ranked = [...rows].sort((a, b) => a.e - b.e || b.len - a.len || a.name.localeCompare(b.name));
+  const best = ranked[0], matched = best.e <= TOLERANCE;
+  const [c, w, h] = prepare(cv);
+  const A = axes(c, w, h, { x0: 0, x1: 4, y0: rows.length, y1: 0, xt: [0, 1, 2, 3, 4], xf: (t) => (t === 4 ? "≥4" : String(t)), m: { l: 136, b: 22, t: 4 } });
+  rows.forEach((row, i) => {
+    const y = A.Y(i + 0.5), bh = (A.Y(1) - A.Y(0)) * 0.62, e = Math.min(row.e, 4);
+    const col = row === best ? (matched ? css("--good") : css("--bad")) : row.name === target ? css("--sky") : css("--line");
+    c.fillStyle = col;
+    if (Number.isFinite(row.e)) c.fillRect(A.X(0), y - bh / 2, Math.max(2, A.X(e) - A.X(0)), bh);
+    label(c, row.name, A.m.l - 8, y, row.name === target ? css("--text") : css("--muted"), "right", "middle");
+    label(c, Number.isFinite(row.e) ? row.e.toFixed(2) : "–", Number.isFinite(row.e) ? A.X(e) + 5 : A.X(0) + 4, y, css("--muted"), "left", "middle");
+  });
+  line(c, [[A.X(TOLERANCE), A.Y(0)], [A.X(TOLERANCE), A.Y(rows.length)]], css("--gold"), 1.5, [4, 3]);
+  label(c, "tolerance 0.5", A.X(TOLERANCE) + 4, A.Y(rows.length) - 3, css("--gold"), "left");
+  return { best, matched };
+}
+function drawMatch() {
+  const notes = hummedNotes();
+  $("#hummed").innerHTML = notes.map((m) => `<span>${noteName(m)}</span>`).join("");
+  const { best, matched } = drawRanking($("#match"), notes, $("#song").value);
+  $("#verdict").innerHTML = matched
+    ? `<span class="good">Matched: ${best.name}</span> <span class="muted">(error ${best.e.toFixed(2)})</span>`
+    : `<span class="bad">No match.</span> <span class="muted">Closest is ${best.name} at ${best.e.toFixed(2)}.</span>`;
+}
+const songSel = $("#song");
+Object.keys(SONGS).forEach((n) => songSel.add(new Option(n, n)));
+songSel.value = "Zelda's Lullaby";
+songSel.addEventListener("change", drawMatch);
+$("#play-match").addEventListener("click", () => play(hummedNotes()));
+
+// ---------- 26: in-browser fallback, a JavaScript port of recognizer.py
+function makeTracker(fs) {
+  const frame = Math.round(0.04 * fs), hop = Math.max(1, Math.round(0.01 * fs));
+  const nfft = 2 ** Math.ceil(Math.log2(frame * 4)), bin = fs / nfft, nb = nfft / 2 + 1, nh = Math.floor(nb / 3);
+  const win = Float64Array.from({ length: frame }, (_, n) => 0.5 - 0.5 * Math.cos((TAU * n) / (frame - 1)));
+  const lo = Math.ceil(80 / bin), hi = Math.min(Math.floor(1200 / bin), nh - 1);
+  const re = new Float64Array(nfft), im = new Float64Array(nfft), mag = new Float64Array(nb);
+  function pitch(x, s, rmsMin) {
+    let e = 0;
+    for (let n = 0; n < frame; n++) e += x[s + n] * x[s + n];
+    if (Math.sqrt(e / frame) < rmsMin) return NaN;
+    re.fill(0); im.fill(0);
+    for (let n = 0; n < frame; n++) re[n] = x[s + n] * win[n];
+    fft(re, im);
+    for (let k = 0; k < nb; k++) mag[k] = Math.hypot(re[k], im[k]);
+    let loud = 0;
+    for (let k = lo; k <= hi; k++) loud = Math.max(loud, mag[k]);
+    let best = lo, bestV = -1;
+    for (let k = lo; k <= hi; k++) {
+      if (mag[k] < 0.1 * loud) continue;
+      const p = mag[k] * mag[2 * k] * mag[3 * k];
+      if (p > bestV) { bestV = p; best = k; }
+    }
+    const f = refine(mag, best) * bin;
+    return f >= 80 && f <= 1200 ? f : NaN;
+  }
+  return { frame, hop, pitch };
+}
+function segmentNotes(track, minNote, minRest) {
+  const segs = [];
+  let rested = true;
+  for (let i = 0; i < track.length; ) {
+    let j = i;
+    while (j < track.length && track[j] === track[i]) j++;
+    const v = track[i], len = j - i, last = segs[segs.length - 1];
+    if (v === null) rested = rested || len >= minRest;
+    else if (len >= minNote) {
+      if (rested || last.note !== v) segs.push({ note: v, start: i, end: j });
+      else last.end = j;
+      rested = false;
+    }
+    i = j;
+  }
+  return segs;
+}
+function analyze(samples, fs) {
+  const x = Float64Array.from(samples), t = makeTracker(fs), hopSec = t.hop / fs;
+  let mean = 0, peak = 0;
+  for (const v of x) mean += v;
+  mean /= x.length || 1;
+  for (let i = 0; i < x.length; i++) { x[i] -= mean; peak = Math.max(peak, Math.abs(x[i])); }
+  if (!peak || x.length < t.frame) return { midi: [], segs: [], notes: [], detune: 0, hopSec };
+  for (let i = 0; i < x.length; i++) x[i] /= peak;
+  const midi = [];
+  for (let s = 0; s + t.frame <= x.length; s += t.hop) midi.push(69 + 12 * Math.log2(t.pitch(x, s, 0.02) / 440));
+  let zr = 0, zi = 0, voiced = 0;
+  midi.forEach((m) => { if (!Number.isNaN(m)) { zr += Math.cos(TAU * m); zi += Math.sin(TAU * m); voiced++; } });
+  const detune = voiced ? Math.atan2(zi, zr) / TAU : 0;
+  const segs = segmentNotes(midi.map((m) => (Number.isNaN(m) ? null : Math.round(m - detune))), 8, 3);
+  return { midi, segs, notes: segs.map((s) => s.note), detune, hopSec };
+}
+
+let liveTrace = null, lastMatch = null, rec = null;
+function drawTrace() {
+  const [c, w, h] = prepare($("#trace"));
+  const d = liveTrace || { midi: [], segs: [], hopSec: 0.01, detune: 0 };
+  const dur = Math.max(4, d.midi.length * d.hopSec), vals = d.midi.filter((m) => !Number.isNaN(m));
+  let lo = 50, hi = 78;
+  if (vals.length) { lo = Math.floor(vals.reduce((a, b) => Math.min(a, b))) - 3; hi = Math.ceil(vals.reduce((a, b) => Math.max(a, b))) + 3; }
+  const yt = [];
+  for (let m = Math.ceil(lo); m <= hi; m++) if (m % 12 === 0 || m % 12 === 7) yt.push(m);
+  const step = dur > 8 ? 2 : 1;
+  const A = axes(c, w, h, { x0: 0, x1: dur, y0: lo, y1: hi, xt: Array.from({ length: Math.floor(dur / step) + 1 }, (_, i) => i * step), yt, yf: noteName, xl: "seconds", m: { l: 40 } });
+  d.segs.forEach((s) => {
+    const y = A.Y(s.note + d.detune);
+    line(c, [[A.X(s.start * d.hopSec), y], [A.X(s.end * d.hopSec), y]], css("--gold"), 5);
+    label(c, noteName(s.note), A.X(((s.start + s.end) / 2) * d.hopSec), y - 6, css("--gold"));
+  });
+  d.midi.forEach((m, i) => { if (!Number.isNaN(m)) dot(c, A.X(i * d.hopSec), A.Y(m), 1.7, css("--sky")); });
+  if (!liveTrace) label(c, "Pitch over time appears here", w / 2, h / 2, css("--muted"), "center", "middle");
+}
+function drawLive() {
+  drawTrace();
+  drawRanking($("#live-rank"), liveTrace ? liveTrace.notes || [] : [], null);
+}
+const status = (html) => { $("#live-status").innerHTML = html; };
+function showLive(res, playDelay) {
+  liveTrace = res;
+  drawTrace();
+  $("#live-notes").innerHTML = res.notes.map((m) => `<span>${noteName(m)}</span>`).join("");
+  const { best, matched } = drawRanking($("#live-rank"), res.notes, null);
+  lastMatch = matched && res.notes.length >= 5 ? best.name : null;
+  $("#play-live").disabled = !lastMatch;
+  const v = $("#live-verdict");
+  if (res.notes.length < 5) {
+    v.innerHTML = `<span class="bad">Heard ${res.notes.length} note${res.notes.length === 1 ? "" : "s"}.</span> <span class="muted">Songs have 5 to 8. Hum a little louder and slower.</span>`;
+  } else if (lastMatch) {
+    v.innerHTML = `<span class="good">You played ${best.name}!</span> <span class="muted">(error ${best.e.toFixed(2)})</span>`;
+    setTimeout(() => play(SONGS[lastMatch]), playDelay * 1000);
+  } else {
+    v.innerHTML = `<span class="bad">No match.</span> <span class="muted">Closest is ${best.name} at ${best.e.toFixed(2)}.</span>`;
+  }
+}
+
+const MAX_SECONDS = 12;
+function micBlocked() {
+  status(`<span class="bad">The microphone isn't available in this viewer.</span> Upload a recording or play the example. To use the mic, run <code>ocarina slides</code> from the project.`);
+}
+async function startListening() {
+  const ctx = ensureAudio();
+  if (!ctx || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return micBlocked();
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+  } catch (e) { return micBlocked(); }
+  const src = ctx.createMediaStreamSource(stream), proc = ctx.createScriptProcessor(4096, 1, 1);
+  const tracker = makeTracker(ctx.sampleRate), chunks = [];
+  let total = 0;
+  liveTrace = { midi: [], segs: [], notes: [], hopSec: 4096 / ctx.sampleRate, detune: 0 };
+  proc.onaudioprocess = (ev) => {
+    const d = new Float32Array(ev.inputBuffer.getChannelData(0));
+    chunks.push(d);
+    total += d.length;
+    liveTrace.midi.push(69 + 12 * Math.log2(tracker.pitch(d, d.length - tracker.frame, 0.01) / 440));
+    drawTrace();
+    const left = MAX_SECONDS - total / ctx.sampleRate;
+    $("#listen").textContent = `■ Stop (${Math.max(0, Math.ceil(left))} s)`;
+    if (left <= 0) stopListening();
+  };
+  src.connect(proc);
+  proc.connect(ctx.destination);
+  rec = { stream, src, proc, chunks, rate: ctx.sampleRate };
+  $("#listen").classList.add("rec");
+  $("#listen").textContent = `■ Stop (${MAX_SECONDS} s)`;
+  status("Listening. Hum now, then press Stop.");
+}
+function stopListening() {
+  if (!rec) return;
+  const { stream, src, proc, chunks, rate } = rec;
+  rec = null;
+  proc.onaudioprocess = null;
+  src.disconnect();
+  proc.disconnect();
+  stream.getTracks().forEach((t) => t.stop());
+  $("#listen").classList.remove("rec");
+  $("#listen").textContent = "● Listen";
+  const all = new Float32Array(chunks.reduce((s, c) => s + c.length, 0));
+  let o = 0;
+  chunks.forEach((c) => { all.set(c, o); o += c.length; });
+  status(`Analyzed ${(all.length / rate).toFixed(1)} s from the microphone.`);
+  showLive(analyze(all, rate), 0.3);
+}
+$("#listen").addEventListener("click", () => (rec ? stopListening() : startListening()));
+$("#upload-btn").addEventListener("click", () => { ensureAudio(); $("#upload").click(); });
+$("#upload").addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  e.target.value = "";
+  if (!file) return;
+  const ctx = ensureAudio();
+  if (!ctx) return status(`<span class="bad">This browser can't decode audio.</span>`);
+  status(`Decoding ${file.name}…`);
+  try {
+    const buf = await ctx.decodeAudioData(await file.arrayBuffer());
+    const n = Math.min(buf.length, 20 * buf.sampleRate), mono = new Float32Array(n);
+    for (let ch = 0; ch < buf.numberOfChannels; ch++) {
+      const d = buf.getChannelData(ch);
+      for (let i = 0; i < n; i++) mono[i] += d[i] / buf.numberOfChannels;
+    }
+    status(`Analyzed ${(n / buf.sampleRate).toFixed(1)} s of ${file.name}.`);
+    showLive(analyze(mono, buf.sampleRate), 0.3);
+  } catch (err) {
+    status(`<span class="bad">Couldn't read ${file.name}.</span> Try a WAV, MP3 or M4A file.`);
+  }
+});
+$("#example").addEventListener("click", () => {
+  const names = Object.keys(SONGS), r = rng((Math.random() * 1e9) | 0);
+  const name = names[Math.floor(r() * names.length)];
+  const transpose = -12 + Math.floor(r() * 5) + (r() - 0.5) * 0.8;
+  const { x, fs } = synthHum(SONGS[name], { transpose, seed: (r() * 1e9) | 0 });
+  const played = playBuffer(x, fs);
+  status(`Example: a hummed song, ${Math.abs(transpose).toFixed(1)} semitones below the ocarina. The ocarina answers when it finishes.`);
+  showLive(analyze(x, fs), played ? played + 0.4 : 0.3);
+});
+$("#play-live").addEventListener("click", () => lastMatch && play(SONGS[lastMatch]));
+
+// ---------- segmented controls
+function segment(attr, set) {
+  document.querySelectorAll(`[data-${attr}]`).forEach((b) => b.addEventListener("click", () => {
+    document.querySelectorAll(`[data-${attr}]`).forEach((o) => o.setAttribute("aria-pressed", o === b));
+    set(b.dataset[attr]);
+  }));
+}
+segment("note", (v) => { s3note = +v; drawPitch(); });
+segment("circ", (v) => { circKind = v; drawCirc(); });
+segment("lay", (v) => { layKind = v; drawLayout(); });
+segment("order", (v) => { layShift = v === "shift"; drawLayout(); });
+segment("leak", (v) => { leakWin = v; drawLeak(); });
+segment("tone", (v) => { tone = v; drawHPS(); });
+segment("nfft", (v) => { nfftPara = +v; drawPara(); });
+segment("variant", (v) => { variant = v; drawMatch(); });
+
+const SLIDERS = { ph2: drawDomains, ph3: drawDomains, lc: drawLoop, t4: drawFrames, pf: drawProbe, dj: drawDFTM, dk: drawDFTM, ln: drawLayout, lk: drawLayout, cyc: drawLeak, logn: drawOps, f0: drawHPS, ftrue: drawPara, cents: drawCircle };
+Object.entries(SLIDERS).forEach(([id, fn]) => $("#" + id).addEventListener("input", fn));
+const ALL = [drawStaff, drawRaw, drawPitch, drawDomains, drawFrames, drawProbe, drawDFTM, drawLoop, drawCirc, drawLayout, drawLeak, drawButterfly, drawOps, drawHPS, drawPara, drawCircle, drawMatch, drawLive];
+const drawAll = () => ALL.forEach((f) => f());
+
+// ---------- copy buttons on demo commands (trailing "# comments" are not copied)
+document.querySelectorAll(".cmd").forEach((box) => {
+  const b = document.createElement("button");
+  b.type = "button"; b.className = "copy"; b.textContent = "Copy";
+  box.append(b);
+  b.addEventListener("click", async () => {
+    const text = box.querySelector("code").textContent.replace(/\s+#.*$/, "").trim();
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch (e) {
+      const t = document.createElement("textarea");
+      t.value = text; document.body.append(t); t.select(); document.execCommand("copy"); t.remove();
+    }
+    b.textContent = "Copied";
+    setTimeout(() => (b.textContent = "Copy"), 1200);
+  });
+});
+
+// ---------- "you are here" strip on teaching slides
+const STAGES = [["Sound", 3], ["Frames", 5], ["Spectrum", 6], ["Pitch", 13], ["Notes", 15], ["Song", 16]];
+document.querySelectorAll(".slide[data-stage]").forEach((s) => {
+  const at = +s.dataset.stage, ol = document.createElement("ol");
+  ol.className = "where";
+  ol.setAttribute("aria-label", "Pipeline stage");
+  ol.innerHTML = STAGES.map(([name, go], i) =>
+    `<li class="${i < at ? "done" : ""}"><button type="button" data-go="${go}"${i === at ? ' aria-current="step"' : ""}>${name}</button></li>`).join("");
+  s.prepend(ol);
+});
+
+// ---------- navigation, notes and the two timers (talk 20:00, demo 10:00)
+const slides = [...document.querySelectorAll(".slide")];
+const parts = slides.map((s) => s.dataset.part);
+const budgets = slides.map((s) => +s.dataset.budget);
+const LIMIT = { talk: 1200, demo: 600 };
+const clock = { talk: { elapsed: 0, since: null }, demo: { elapsed: 0, since: null } };
+let cur = 0, showNotes = false, running = false, everStarted = false;
+const now = () => performance.now() / 1000;
+const pause = (p) => { const c = clock[p]; if (c.since !== null) { c.elapsed += now() - c.since; c.since = null; } };
+const resume = (p) => { if (clock[p].since === null) clock[p].since = now(); };
+const timeOf = (p) => clock[p].elapsed + (clock[p].since === null ? 0 : now() - clock[p].since);
+function go(i) {
+  i = Math.max(0, Math.min(slides.length - 1, i));
+  const was = parts[cur];
+  slides[cur].classList.remove("active");
+  slides[cur].setAttribute("aria-hidden", "true");
+  cur = i;
+  slides[cur].classList.add("active");
+  slides[cur].removeAttribute("aria-hidden");
+  slides[cur].scrollTop = 0;
+  $("#count").textContent = `${cur + 1} / ${slides.length}`;
+  $("#prog").style.width = `${((cur + 1) / slides.length) * 100}%`;
+  $("#notes-box").textContent = slides[cur].dataset.notes;
+  if (running && was !== parts[cur]) { pause(was); resume(parts[cur]); }
+  if (!everStarted && cur > 0) { everStarted = running = true; resume(parts[cur]); }
+  const hash = `#slide-${cur + 1}`;
+  if (location.hash !== hash) { try { history.replaceState(null, "", hash); } catch (e) { /* ignore */ } }
+  tickTimer();
+}
+slides.forEach((s, i) => i && s.setAttribute("aria-hidden", "true"));
+function tickTimer() {
+  const p = parts[cur], t = timeOf(p);
+  const mmss = (s) => `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+  const due = budgets.reduce((a, b, i) => a + (i <= cur && parts[i] === p ? b : 0), 0);
+  const el = $("#timer");
+  el.textContent = `${p === "talk" ? "Talk" : "Demo"} ${mmss(t)} / ${mmss(LIMIT[p])}`;
+  el.classList.toggle("behind", t > due);
+  el.classList.toggle("paused", everStarted && !running);
+  el.title = `${t > due ? "Behind the planned pace for this slide. " : ""}Click or press T to ${running ? "pause" : "start"} the ${p} timer`;
+}
+setInterval(tickTimer, 500);
+function toggleTimer() {
+  const p = parts[cur];
+  if (running) pause(p); else resume(p);
+  running = !running;
+  everStarted = true;
+  tickTimer();
+}
+$("#timer").addEventListener("click", toggleTimer);
+$("#prev").addEventListener("click", () => go(cur - 1));
+$("#next").addEventListener("click", () => go(cur + 1));
+$("#notes-btn").addEventListener("click", (e) => {
+  showNotes = !showNotes;
+  e.currentTarget.setAttribute("aria-pressed", showNotes);
+  $("#notes-box").hidden = !showNotes;
+  requestAnimationFrame(drawAll);
+});
+document.querySelectorAll("[data-go]").forEach((b) => b.addEventListener("click", () => go(+b.dataset.go - 1)));
+addEventListener("keydown", (e) => {
+  if (e.target.closest("input, select, textarea")) return;
+  if (e.key === " " && e.target.closest("button")) return;
+  if (["ArrowRight", "PageDown", " "].includes(e.key)) { e.preventDefault(); go(cur + 1); }
+  else if (["ArrowLeft", "PageUp"].includes(e.key)) { e.preventDefault(); go(cur - 1); }
+  else if (e.key === "Home") go(0);
+  else if (e.key === "End") go(slides.length - 1);
+  else if (e.key === "n" || e.key === "N") $("#notes-btn").click();
+  else if (e.key === "t" || e.key === "T") toggleTimer();
+});
+let touch = null;
+$("#deck").addEventListener("touchstart", (e) => {
+  touch = e.target.closest("input, button, select, canvas") ? null : [e.touches[0].clientX, e.touches[0].clientY];
+}, { passive: true });
+$("#deck").addEventListener("touchend", (e) => {
+  if (!touch) return;
+  const dx = e.changedTouches[0].clientX - touch[0], dy = e.changedTouches[0].clientY - touch[1];
+  if (Math.abs(dx) > 60 && Math.abs(dx) > 1.5 * Math.abs(dy)) go(cur + (dx < 0 ? 1 : -1));
+  touch = null;
+});
+const fromHash = () => { const m = location.hash.match(/^#slide-(\d+)$/); if (m) go(+m[1] - 1); };
+addEventListener("hashchange", fromHash);
+let resizeTimer;
+addEventListener("resize", () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(drawAll, 120); });
+
+fromHash();
+go(cur);
+drawAll();
+if (document.fonts) document.fonts.ready.then(drawAll);
+window.addEventListener("load", () => {
+  if (window.MathJax && MathJax.startup) MathJax.startup.promise.then(drawAll);
+});
+</script>
+</body>
+</html>

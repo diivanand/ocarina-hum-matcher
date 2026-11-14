@@ -1,0 +1,54 @@
+[project]
+name = "ocarina-hum-matcher"
+version = "0.1.0"
+description = "Recognize Ocarina of Time songs from humming, singing or whistling: mic or WAV in, song out."
+readme = "README.md"
+authors = [{ name = "Diivanand Ramalingam" }]
+license = "MIT"
+license-files = ["LICENCE.md"]
+requires-python = ">=3.10"
+keywords = ["audio", "pitch-detection", "fft", "dsp", "zelda", "ocarina"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Topic :: Multimedia :: Sound/Audio :: Analysis",
+    "Environment :: Console",
+]
+dependencies = [
+    "numpy>=1.26",
+    "scipy>=1.11",
+    "matplotlib>=3.8",
+    "sounddevice>=0.4.6",
+]
+
+[project.scripts]
+ocarina = "ocarina_hum_matcher.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+    "mypy>=1.10",
+    "ruff>=0.5",
+    "scipy-stubs>=1.11; python_version >= '3.11'",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "N"]
+
+[tool.mypy]
+strict = true
+files = ["src", "tests"]
+
+[[tool.mypy.overrides]]
+module = ["sounddevice"]
+ignore_missing_imports = true
