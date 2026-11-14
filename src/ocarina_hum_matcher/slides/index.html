@@ -769,7 +769,7 @@ track = [None if np.isnan(m) else int(round(m - detune)) for m in midi]</pre></f
 </section>
 
 <!-- 16 -->
-<section class="slide" data-part="talk" data-budget="75" data-stage="5" data-notes="Last stage. A song is a short vector of note numbers. Humming it lower subtracts the same number from every entry, so all the keys of one song form a line along the all-ones vector. The distance from what you hummed to that line is the error. In L2 the best shift would be the mean; in L1 it's the median, so one wrong note can't drag the key off. Pick a song and try the four variants: in another key it's still a perfect match; one wrong note still matches; backwards, the same notes in reverse, is rejected. The two closest songs are 1.17 apart, and the tolerance is 0.5, so by the triangle inequality no hum can be within tolerance of two songs.">
+<section class="slide" data-part="talk" data-budget="75" data-stage="5" data-notes="Last stage. A song is a short vector of note numbers. Humming it lower subtracts the same number from every entry, so all the keys of one song form a line along the all-ones vector. The distance from what you hummed to that line is the error. In L2 the best shift would be the mean; in L1 it's the median, so one wrong note can't drag the key off. Pick a song and try the four variants: in another key it's still a perfect match; one wrong note still matches; backwards, the same notes in reverse, is rejected. Songs of the same length are at least 1.5 apart and the tolerance is 0.5, so by the triangle inequality no hum can be within tolerance of two of them. Across lengths there is exactly one borderline case: Bolero with its seventh note sung as F4 is exactly 0.5 from both Bolero and Requiem, and ties go to the longer song, Bolero.">
   <div class="inner">
     <div class="text">
       <p class="eyebrow">Song · stage 5</p>
@@ -777,7 +777,7 @@ track = [None if np.isnan(m) else int(round(m - detune)) for m in midi]</pre></f
       <ul class="points">
         <li>A song is a vector of note numbers \(s \in \mathbb{Z}^{L}\), with L = 5 to 8. Humming it c semitones lower gives \(s - c\mathbf 1\), so all keys of one song form a line along \(\mathbf 1 = (1, \ldots, 1)\).</li>
         <li>The error is the L1 distance to that line. The best shift is the <b>median</b> of the differences (in L2 it would be the mean), so one wrong note can't drag the key.</li>
-        <li>Slide each song over every window of your notes, keep the best, and accept if \(E \le 0.5\). The two closest songs are 1.17 apart, so by the triangle inequality no hum is within 0.5 of both.</li>
+        <li>Slide each song over every window of your notes, keep the best, and accept if \(E \le 0.5\). Songs of the same length are at least 1.5 apart, so by the triangle inequality no window is within 0.5 of two of them. The one exception across lengths: Bolero with its seventh note sung as F4 is exactly 0.5 from both Bolero and Requiem, and ties go to Bolero.</li>
       </ul>
       <div class="math">\[ E(x, s) = \min_{c\in\mathbb{R}}\ \frac1L \bigl\lVert x - s - c\mathbf{1} \bigr\rVert_1, \qquad c^{\star} = \operatorname{median}(x - s) \]</div>
       <figure class="code"><figcaption>recognizer.py · rank_songs</figcaption><pre><span class="c"># one row per window of your notes, minus the song</span>
@@ -826,7 +826,7 @@ errors = np.abs(diffs - offsets[:, None]).mean(axis=1)  <span class="c"># L1 to 
       </table>
     </div>
     <ul class="points">
-      <li><b>Small, fixed and well separated.</b> 12 songs are known in advance, and the closest pair is 1.17 apart against a 0.5 tolerance. Comparing against all of them is instant, and a threshold can safely say "no match".</li>
+      <li><b>Small, fixed and well separated.</b> 12 songs are known in advance, same-length songs are at least 1.5 apart against a 0.5 tolerance, and only one borderline hum is within tolerance of two songs. Comparing against all of them is instant, and a threshold can safely say "no match".</li>
       <li><b>A cooperative player.</b> One sustained note at a time, on purpose, usually in a quiet room: the easy case for tracking \(f_0\).</li>
       <li><b>The game only needs which melody.</b> Throwing away timing, timbre and key isn't a loss. It's exactly the invariance we want, bought with a median and a logarithm instead of training data.</li>
     </ul>

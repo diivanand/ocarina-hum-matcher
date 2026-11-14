@@ -90,7 +90,7 @@ The Scarecrow's Song is left out because each player composes their own.
 3. **Harmonic product spectrum.** The spectrum is multiplied by copies of itself compressed 2× and 3×. Only the true fundamental sits on a peak in all three, which avoids octave errors. A bin must hold at least 10% of the loudest bin's magnitude, or a whistle (nearly a pure sine) would lock onto a subharmonic.
 4. **Peak refinement.** A hill-climb finds the top of the spectral peak, and a parabola through the log magnitudes of three bins locates it to a fraction of a bin. That matters because semitones near 150 Hz are under 9 Hz apart.
 5. **Notes.** Hz becomes MIDI with `69 + 12·log2(f/440)`. Your overall tuning comes from the circular mean of the fractional parts, so being 40 cents sharp doesn't split notes. Runs shorter than 80 ms (slides and wobble) are dropped, and a repeated note needs a 30 ms rest.
-6. **Matching.** A melody is a vector, and changing key adds a multiple of the all-ones vector. For each song and each window of your notes, the best key shift is the median difference, which minimizes the mean absolute error. The best song wins if its error is at most 0.5 semitones. The two closest songs (Requiem, and six notes of Bolero) are 1.17 apart, so by the triangle inequality no window can be within tolerance of both.
+6. **Matching.** A melody is a vector, and changing key adds a multiple of the all-ones vector. For each song and each window of your notes, the best key shift is the median difference, which minimizes the mean absolute error. The best song wins if its error is at most 0.5 semitones. Songs of the same length are at least 1.5 apart, so by the triangle inequality no window can be within tolerance of two of them. Songs of different lengths can come closer: Requiem is 1.17 from six notes of Bolero. That leaves exactly one ambiguous hum: Bolero with its seventh note sung as F4 instead of A4 (in any key) is exactly 0.5 from both Bolero and Requiem. Ties go to the longer song, so it matches Bolero. A brute-force search over every hum within tolerance of any song finds no other case.
 
 ### Cost, in plain words
 
@@ -98,6 +98,29 @@ The Scarecrow's Song is left out because each player composes their own.
 - **Per recording:** there are 100 frames per second, so work grows in step with length: twice the humming, twice the work. Five seconds is roughly 50 million operations, a few milliseconds in NumPy.
 - **Matching:** 12 songs × each window × at most 8 notes is a few thousand operations, so it costs next to nothing.
 - **Live mode** re-analyzes everything recorded so far every half second. Over a session that grows with the square of its length, but the 12-second cap keeps each check to a fraction of a second.
+
+## Learn the math
+
+[**The Mathematics of Humming a Song**](docs/ocarina-math-primer.pdf) is a 20-page primer that proves why every step above works. It assumes a first course in linear algebra and no signal processing. Its ten short lessons cover:
+
+1. sampling and pitch
+2. complex exponentials
+3. the DFT as a change of basis
+4. how `fft` lays out its output
+5. shifts and circulant matrices
+6. leakage and windows
+7. the FFT
+8. the harmonic product spectrum
+9. the circular-mean tuning correction
+10. key-invariant matching
+
+Each lesson has definitions, proofs, worked examples, a box pointing at the code that implements it, and two or three exercises. Answers are in an appendix. It pairs with the slide deck (`ocarina slides`).
+
+The LaTeX source is in `docs/primer/`. Rebuild it with:
+
+```sh
+cd docs/primer && latexmk -pdf -outdir=build primer.tex && cp build/primer.pdf ../ocarina-math-primer.pdf
+```
 
 ## Python API
 
@@ -149,11 +172,14 @@ ocarina-hum-matcher/
 │   ├── test_songs.py        # 24 tests, two per song
 │   └── test_cli.py          # commands, including `listen` with a fake mic
 ├── examples/zeldas-lullaby-hum.wav
-└── docs/example-report.png
+└── docs/
+    ├── example-report.png
+    ├── ocarina-math-primer.pdf   # the math primer
+    └── primer/primer.tex         # its LaTeX source
 ```
 
 ## License
 
-[MIT](LICENCE.md) © 2026 Diivanand Ramalingam. You're free to use, copy, modify and redistribute this project, including the slides, as long as you credit Diivanand Ramalingam and keep the copyright and license notice.
+[MIT](LICENCE.md) © 2026 Diivanand Ramalingam. You're free to use, copy, modify and redistribute this project, including the slides and the math primer, as long as you credit Diivanand Ramalingam and keep the copyright and license notice.
 
 This is a fan project, not affiliated with or endorsed by Nintendo.

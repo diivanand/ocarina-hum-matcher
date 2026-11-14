@@ -24,10 +24,13 @@ from .songs import OCARINA_SONGS
 FloatArray = NDArray[np.float64]
 IntArray = NDArray[np.intp]
 
-# Mean semitone error allowed after transposing to the performer's key. The two
-# closest songs (Bolero vs Requiem) are 1.17 apart, so 0.5 keeps every song's
-# acceptance region separate while forgiving a few semitone slips. 1.5 accepted
-# Zelda's Lullaby backwards; 1.0 accepted Epona's Song backwards as Saria's Song.
+# Mean semitone error allowed after transposing to the performer's key. Songs of the
+# same length are at least 1.5 apart, so at 0.5 no window is within tolerance of two
+# of them, while a few semitone slips are forgiven. Across lengths, Requiem is 1.17
+# from six notes of Bolero, and exactly one hum is within 0.5 of both: Bolero with its
+# seventh note sung as F4, exactly 0.5 from each. Ties go to the longer song (Bolero).
+# 1.5 accepted Zelda's Lullaby backwards; 1.0 accepted Epona's Song backwards as
+# Saria's Song.
 DEFAULT_TOLERANCE: Final = 0.5
 
 

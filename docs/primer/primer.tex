@@ -1,0 +1,1400 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1.1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{mathtools}
+\usepackage[most]{tcolorbox}
+\usepackage{listings}
+\usepackage{enumitem}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage[colorlinks=true,linkcolor=black,urlcolor=blue!60!black]{hyperref}
+
+% ---------- theorem machinery (numbered within each lesson) ----------
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{example}[theorem]{Example}
+\newtheorem{remark}[theorem]{Remark}
+\newtheorem{innerexercise}{Exercise}[section]
+\newenvironment{exercise}[1][]{\begin{innerexercise}[#1]}{\end{innerexercise}}
+
+% ---------- notation ----------
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\C}{\mathbb{C}}
+\newcommand{\Z}{\mathbb{Z}}
+\newcommand{\ip}[2]{\langle #1,\, #2\rangle}
+\newcommand{\norm}[1]{\lVert #1\rVert}
+\newcommand{\abs}[1]{\lvert #1\rvert}
+\newcommand{\one}{\mathbf{1}}
+\newcommand{\diag}{\operatorname{diag}}
+\newcommand{\median}{\operatorname{median}}
+\newcommand{\round}{\operatorname{round}}
+\newcommand{\cconv}{\circledast}
+\newcommand{\code}[1]{\texttt{#1}}
+
+% ---------- "used in" tag: where each lesson lives in the code ----------
+\newcommand{\usedin}[1]{\par\noindent\colorbox{black!8}{\parbox{\dimexpr\linewidth-2\fboxsep\relax}{\small\textsc{Used in:}~#1}}\par\medskip}
+
+% ---------- boxes ----------
+\newtcolorbox{connection}{colback=black!4,colframe=black!55,boxrule=0.5pt,
+  arc=1.5pt,left=7pt,right=7pt,top=5pt,bottom=5pt,breakable,
+  before skip=10pt,after skip=10pt}
+
+% ---------- code ----------
+\lstset{
+  language=Python,
+  basicstyle=\ttfamily\small,
+  commentstyle=\itshape\color{black!60},
+  keywordstyle=\bfseries,
+  showstringspaces=false,
+  columns=fullflexible,
+  keepspaces=true,
+  frame=single,
+  framerule=0.3pt,
+  rulecolor=\color{black!40},
+  xleftmargin=6pt,xrightmargin=6pt,
+  aboveskip=8pt,belowskip=8pt,
+  breaklines=true
+}
+
+\setlist{itemsep=2pt,topsep=4pt}
+\setcounter{tocdepth}{1}
+
+\title{\bfseries The Mathematics of Humming a Song\\[4pt]
+\large A short primer for \texttt{ocarina-hum-matcher}}
+\author{Diivanand Ramalingam}
+\date{November 2026}
+
+\begin{document}
+\maketitle
+
+\section*{How to use this booklet}
+
+The \code{ocarina} tool listens to a few seconds of humming and names the
+\emph{Ocarina of Time} song it heard. Everything it does rests on a short chain of
+ideas: sampling, complex exponentials, the discrete Fourier transform as a change of
+basis, how NumPy lays out its output, shifts and circulant matrices, leakage and
+windows, the FFT, the harmonic product spectrum, a circular mean, and a median. This
+booklet covers exactly that chain, in ten short lessons, and nothing else.
+
+You need a first course in linear algebra (vectors, dot products, matrices, bases,
+orthogonality) and comfort with complex numbers at the level of $i^2=-1$. No signal
+processing is assumed: every term is defined before it is used.
+
+Each lesson has the same three layers:
+\begin{itemize}
+  \item \textbf{Theory}: definitions, then theorems with complete proofs. Knowing
+  \emph{why} a step works is what lets you predict when it will fail.
+  \item \textbf{Practice by hand}: small examples ($N=4$ or $N=8$, six-note melodies)
+  computed with pencil and paper.
+  \item \textbf{Code connection}: a box pointing at the lines of
+  \nolinkurl{src/ocarina_hum_matcher/recognizer.py} that implement the lesson.
+\end{itemize}
+
+Each lesson ends with two or three exercises, tagged \textbf{(Hand)} or
+\textbf{(Proof)}: usually one by hand and one or two proofs. Do them all. The starred
+proof in each lesson is the one that tests whether you understand \emph{why} the method
+works, not just how. Appendix~\ref{app:hints} has answers and proof hints. Each lesson
+takes 30 to 45 minutes, so the whole primer fits in a week of evenings.
+
+\subsection*{Map of the booklet}
+
+\begin{center}
+\small
+\begin{tabular}{@{}l l l l@{}}
+\toprule
+Lesson & Idea & Where in the code & Slides\\
+\midrule
+\ref{sec:sound} & Sampling, frequency, pitch, notes & \code{synth.py}, \code{songs.py} & 2--4\\
+\ref{sec:complex} & Complex exponentials, probes & (the idea behind every bin) & 6\\
+\ref{sec:dft} & The DFT as a change of basis & \code{magnitude\_spectrum} & 7\\
+\ref{sec:layout} & Periodicity, real signals, \code{rfft} & \code{magnitude\_spectrum} & 8, 10\\
+\ref{sec:circ} & Shifts, circulants, convolution & why only $\abs{X}$ is kept & 9\\
+\ref{sec:window} & Leakage, windows, zero-padding & \code{np.hanning}, \code{zero\_pad} & 11, 14\\
+\ref{sec:fft} & The FFT & \code{scipy.fft.rfft} & 12\\
+\ref{sec:pitch} & Harmonic product, peak refinement & \code{harmonic\_product}, \code{refine\_peaks} & 13--14\\
+\ref{sec:notes} & MIDI numbers, circular mean & \code{estimate\_detune}, \code{segment\_notes} & 15\\
+\ref{sec:match} & Key-invariant matching & \code{rank\_songs}, \code{match\_song} & 16--17\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent ``Slides'' refers to the deck that \code{ocarina slides} opens; the two are
+meant to be used together.
+
+\subsection*{Conventions}
+
+Vectors have $N$ entries indexed $n=0,\dots,N-1$, and indices are read modulo $N$
+whenever they leave that range. Throughout,
+\[
+\omega = e^{-2\pi i/N},\qquad (e_k)_n = e^{2\pi i kn/N}=\omega^{-kn},\qquad
+X_k=\sum_{n=0}^{N-1}x_n\,\omega^{kn}.
+\]
+This is NumPy's convention: \code{np.fft.fft(x)[k]} is $X_k$.
+
+\tableofcontents
+\clearpage
+
+% =====================================================================
+\section{Sound as Numbers}\label{sec:sound}
+\usedin{\code{synth.py} (how test hums are built), \code{songs.py} (notes as MIDI
+numbers), \code{DetectorConfig} (40 ms frames, 80--1{,}200 Hz). Slides 2--4.}
+
+A microphone turns air pressure into a voltage, and a sound card measures that voltage
+at regular instants. This lesson fixes the vocabulary: what is recorded, what
+``frequency'' and ``pitch'' mean, and why sampling makes some frequencies impossible to
+tell apart.
+
+\subsection{Theory}
+
+\begin{definition}[Signal, sample, sample rate]
+A \emph{signal} is a function $x:\R\to\R$; here $x(t)$ is the air pressure at the
+microphone at time $t$ seconds. \emph{Sampling} at rate $f_s$ (samples per second)
+records the numbers $x_n=x(n/f_s)$ for integers $n$. A recording of $N$ samples is a
+vector $(x_0,\dots,x_{N-1})\in\R^N$. Describing a signal by its values at each instant
+is called the \emph{time domain}.
+\end{definition}
+
+\begin{definition}[Period, frequency]
+A signal is \emph{periodic} with period $T>0$ if $x(t+T)=x(t)$ for all $t$. The
+smallest such $T$, when it exists, is the \emph{fundamental period}, and its
+reciprocal $f=1/T$ is the \emph{frequency}, measured in hertz (Hz, repetitions per
+second).
+\end{definition}
+
+\begin{definition}[Sinusoid]
+A \emph{sinusoid} is $a\cos(2\pi f t+\varphi)$ with \emph{amplitude} $a\ge0$,
+\emph{frequency} $f>0$ and \emph{phase} $\varphi\in\R$. Its fundamental period is
+$1/f$. The phase only slides it along the time axis.
+\end{definition}
+
+A voice is not a single sinusoid. A sustained hum is well modelled by a sum of
+sinusoids at whole-number multiples of one frequency.
+
+\begin{proposition}[Harmonic sums repeat at the fundamental]\label{prop:harmperiod}
+Let $f_0>0$ and
+\[
+x(t)=\sum_{h=1}^{H}a_h\cos(2\pi h f_0 t+\varphi_h).
+\]
+Then $1/f_0$ is a period of $x$. More generally, if an integer $g\ge1$ divides every
+$h$ with $a_h\neq0$, then $1/(gf_0)$ is a period of $x$.
+\end{proposition}
+\begin{proof}
+Replace $t$ by $t+1/(gf_0)$. The $h$-th term becomes
+$a_h\cos(2\pi hf_0t+2\pi h/g+\varphi_h)$. When $a_h\ne0$, $h/g$ is an integer, so the
+added angle is a multiple of $2\pi$ and the term is unchanged; when $a_h=0$ the term is
+zero anyway. Taking $g=1$ gives the first claim.
+\end{proof}
+
+\begin{definition}[Fundamental, harmonics, pitch, timbre]
+In Proposition~\ref{prop:harmperiod}, the components at $hf_0$ are the
+\emph{harmonics} and $f_0$ is the \emph{fundamental frequency}. The \emph{pitch} of a
+sound is how high or low it is heard; for sounds of this form the ear hears $f_0$
+(when the harmonics present have no common factor), and \textbf{in this booklet
+``pitch'' means $f_0$ in Hz}. The relative amplitudes $a_h$ set the \emph{timbre}: they
+are why a hum and an ocarina playing the same note sound different.
+\end{definition}
+
+Pitch is multiplicative: equal musical steps are equal \emph{ratios} of frequency.
+
+\begin{definition}[Notes and MIDI numbers]
+In twelve-tone equal temperament, the note with \emph{MIDI number} $m\in\Z$ has
+frequency
+\[
+f(m)=440\cdot 2^{(m-69)/12}\ \text{Hz}.
+\]
+So $m=69$ is A4 (440 Hz), $m=60$ is middle C (C4), and $m=62$ is D4. Adding 1 to $m$
+is one \emph{semitone} (a frequency ratio of $2^{1/12}\approx1.0595$); adding 12 is
+one \emph{octave} (a ratio of exactly 2).
+\end{definition}
+
+Sampling throws information away: between two samples, anything could happen. The
+precise loss is this.
+
+\begin{proposition}[Aliasing]\label{prop:alias}
+Let $f_s>0$. For every integer $j$ and all integers $n$,
+\[
+\cos\!\Big(2\pi\frac{f}{f_s}n+\varphi\Big)=\cos\!\Big(2\pi\frac{f+jf_s}{f_s}n+\varphi\Big)
+=\cos\!\Big(2\pi\frac{f_s-f}{f_s}n-\varphi\Big).
+\]
+Consequently every sampled sinusoid coincides, sample for sample, with a sinusoid whose
+frequency lies in $[0,f_s/2]$. The frequency $f_s/2$ is the \emph{Nyquist frequency}.
+\end{proposition}
+\begin{proof}
+The middle expression adds $2\pi jn$ to the angle, a multiple of $2\pi$. For the
+right one, $2\pi(f_s-f)n/f_s-\varphi=2\pi n-(2\pi fn/f_s+\varphi)$, and cosine is even
+and $2\pi$-periodic. For the consequence, first subtract a multiple of $f_s$ to bring
+$f$ into $[0,f_s)$; if it then exceeds $f_s/2$, replace it by $f_s-f\in(0,f_s/2)$.
+\end{proof}
+
+\subsection{Practice: by hand}
+
+\begin{example}[The ocarina's five notes]
+The ocarina plays D4, F4, A4, B4, D5, with MIDI numbers 62, 65, 69, 71, 74 and
+frequencies $293.66$, $349.23$, $440.00$, $493.88$, $587.33$ Hz. A person humming
+D4 an octave lower produces D3: $m=50$, $f=440\cdot2^{-19/12}=146.83$ Hz, half of
+$293.66$.
+\end{example}
+
+\begin{example}[One frame]
+At $f_s=44{,}100$ Hz, 40 ms is $0.04\times44{,}100=1{,}764$ samples. The lowest pitch
+the code accepts is 80 Hz, whose period is $12.5$ ms, so a 40 ms frame holds $3.2$
+periods: enough to see the repetition.
+\end{example}
+
+\begin{example}[An alias]
+At $f_s=8{,}000$ Hz, a $5{,}000$ Hz cosine produces exactly the samples of a
+$3{,}000$ Hz cosine (with its phase negated): $8{,}000-5{,}000=3{,}000\le4{,}000$.
+After sampling, nothing can tell them apart.
+\end{example}
+
+\begin{connection}
+\textbf{Code connection.} \code{songs.py} stores each song as a tuple of MIDI numbers
+(Zelda's Lullaby is \code{(71, 74, 69, 71, 74, 69)}). \code{synth.render} builds
+exactly the sum of Proposition~\ref{prop:harmperiod}, with harmonic amplitudes
+$(1, 0.5, 0.25, 0.125)$ for a hum and $(1, 0.12, 0.04)$ for the nearly pure ocarina.
+\code{DetectorConfig} searches pitches in $80$--$1{,}200$ Hz, far below the Nyquist
+frequency $22{,}050$ Hz, and the sound card filters out content above $f_s/2$ before
+sampling, so aliasing of the voice is not a concern.
+\end{connection}
+
+\subsection{Exercises}
+\begin{exercise}[Hand]\label{ex:missing}
+Let $x(t)=\cos(2\pi\cdot2f_0t)+\cos(2\pi\cdot3f_0t)$: harmonics 2 and 3 only, with no
+component at $f_0$. Show that $1/f_0$ is a period, but $1/(2f_0)$ and $1/(3f_0)$ are
+not. (This is the ``missing fundamental'' on slide 3: the pattern still repeats at
+$f_0$, and the ear still hears $f_0$.)
+\end{exercise}
+
+\begin{exercise}[Hand]\label{ex:alias}
+At $f_s=44{,}100$ Hz, which frequency in $[0,22{,}050]$ produces the same samples as a
+$30{,}000$ Hz cosine? As a $50{,}000$ Hz cosine?
+\end{exercise}
+
+\begin{exercise}[Proof]\label{ex:nyqinj}
+Show that if $0\le f,g\le f_s/2$ and $\cos(2\pi fn/f_s)=\cos(2\pi gn/f_s)$ for all
+integers $n$, then $f=g$. So below the Nyquist frequency, sampled cosines are never
+confused, and Proposition~\ref{prop:alias} is the whole story.
+\end{exercise}
+
+% =====================================================================
+\section{Complex Exponentials and Probes}\label{sec:complex}
+\usedin{every spectrum value in the code; the probe picture on slide 6.}
+
+The central question of the project is: \emph{how much of frequency $f$ is in this
+frame?} The answer is a dot product with a probe vector, and complex numbers are the
+bookkeeping that makes the answer independent of phase.
+
+\subsection{Theory}
+
+Recall Euler's formula $e^{i\theta}=\cos\theta+i\sin\theta$: the point at angle
+$\theta$ on the unit circle. Hence $\abs{e^{i\theta}}=1$,
+$\overline{e^{i\theta}}=e^{-i\theta}$, $e^{i\theta}e^{i\psi}=e^{i(\theta+\psi)}$, and
+\[
+\cos\theta=\frac{e^{i\theta}+e^{-i\theta}}{2},\qquad
+\sin\theta=\frac{e^{i\theta}-e^{-i\theta}}{2i}.
+\]
+
+\begin{definition}[Inner product on $\C^N$]
+For $x,y\in\C^N$, $\ip{x}{y}=\sum_{n}x_n\overline{y_n}$ and $\norm{x}=\sqrt{\ip xx}$.
+\end{definition}
+
+The conjugate makes $\ip xx=\sum\abs{x_n}^2\ge0$ a genuine squared length. The price:
+$\ip yx=\overline{\ip xy}$, and $\ip{x}{\lambda y}=\bar\lambda\ip xy$ while
+$\ip{\lambda x}{y}=\lambda\ip xy$. On real vectors it is the ordinary dot product.
+
+\begin{lemma}[Roots of unity]\label{lem:roots}
+Let $N\ge1$ and $\omega=e^{-2\pi i/N}$. For every integer $m$,
+\[
+\sum_{n=0}^{N-1}\omega^{mn}=\begin{cases}N&\text{if }N\mid m,\\0&\text{otherwise.}\end{cases}
+\]
+\end{lemma}
+\begin{proof}
+If $N\mid m$ then $\omega^m=e^{-2\pi i m/N}=1$ and all $N$ terms are 1. Otherwise
+$r=\omega^m\ne1$ but $r^N=e^{-2\pi i m}=1$, so the geometric series gives
+$\sum_{n=0}^{N-1}r^n=(1-r^N)/(1-r)=0$.
+\end{proof}
+
+Geometrically, the terms are equally spaced points on the unit circle, and they
+balance. Every orthogonality fact in this booklet is this lemma.
+
+\begin{proposition}[A complex probe is a cosine probe and a sine probe]\label{prop:probe}
+For real $x\in\R^N$ and real angles $\theta_0,\dots,\theta_{N-1}$,
+\[
+\Big\lvert\sum_{n}x_ne^{-i\theta_n}\Big\rvert^2
+=\Big(\sum_nx_n\cos\theta_n\Big)^2+\Big(\sum_nx_n\sin\theta_n\Big)^2.
+\]
+\end{proposition}
+\begin{proof}
+$e^{-i\theta_n}=\cos\theta_n-i\sin\theta_n$, and $x_n$ is real, so the sum has real
+part $\sum x_n\cos\theta_n$ and imaginary part $-\sum x_n\sin\theta_n$. Apply
+$\abs{a+bi}^2=a^2+b^2$.
+\end{proof}
+
+With $\theta_n=2\pi fn/f_s$, the left side is the \emph{score} of frequency $f$ on
+slide 6: a cosine probe alone would miss a sine-shaped component (their products
+cancel), but the pair cannot miss it. For probe frequencies on the grid $f=kf_s/N$,
+the score is exactly phase-blind:
+
+\begin{proposition}[Score of a sampled cosine]\label{prop:cosbin}
+Let $0<k<N/2$ be an integer and $x_n=a\cos(2\pi kn/N+\varphi)$. Then
+\[
+\sum_{n=0}^{N-1}x_n\,\omega^{kn}=\frac{aN}{2}e^{i\varphi},
+\qquad\text{so the score is }\frac{aN}{2}\text{ whatever }\varphi\text{ is.}
+\]
+\end{proposition}
+\begin{proof}
+Write $x_n=\frac a2\big(e^{i\varphi}\omega^{-kn}+e^{-i\varphi}\omega^{kn}\big)$. Then
+$\sum_nx_n\omega^{kn}=\frac a2\big(e^{i\varphi}\sum_n1+e^{-i\varphi}\sum_n\omega^{2kn}\big)$.
+The first sum is $N$. Since $0<2k<N$, $N\nmid 2k$, and Lemma~\ref{lem:roots} makes the
+second sum 0.
+\end{proof}
+
+\subsection{Practice: by hand}
+
+\begin{example}[Fourth roots of unity]
+For $N=4$, $\omega=e^{-2\pi i/4}=-i$, with powers $1,-i,-1,i$: the four compass
+points. For $m=1$: $1-i-1+i=0$. For $m=4$: $1+1+1+1=4$.
+\end{example}
+
+\begin{example}[Why two probes]
+Let $N=4$ and probe one cycle per frame, $\theta_n=2\pi n/4$. The cosine
+$x=(1,0,-1,0)$ has cosine score $1\cdot1+(-1)(-1)=2$ and sine score 0. The sine
+$y=(0,1,0,-1)$ has cosine score \emph{0}: a cosine probe alone would say ``no energy
+here''. Its sine score is $1+1=2$. The complex probe gives
+$\abs{\sum y_n(-i)^n}=\abs{-i-i}=2$ for both, as
+Proposition~\ref{prop:cosbin} promises with $a=1$, $N=4$.
+\end{example}
+
+\begin{connection}
+\textbf{Code connection.} The code never loops over probe frequencies. It computes all
+the grid scores at once with an FFT (Lessons~\ref{sec:dft} and~\ref{sec:fft}), and
+\code{magnitude\_spectrum} keeps only their magnitudes, which by
+Proposition~\ref{prop:cosbin} do not depend on phase. One probe by hand would be
+\code{abs(x @ np.exp(-2j * np.pi * f * np.arange(N) / fs))}.
+\end{connection}
+
+\subsection{Exercises}
+\begin{exercise}[Hand]\label{ex:sixth}
+List the sixth roots of unity $e^{-2\pi in/6}$, $n=0,\dots,5$, as $a+bi$. Check that
+they sum to 0 and that their squares also sum to 0. Which case of
+Lemma~\ref{lem:roots} is each?
+\end{exercise}
+
+\begin{exercise}[Hand]\label{ex:probe4}
+For $N=4$, compute $\sum_nx_n(-i)^n$ for $x=(1,1,-1,-1)$. Write $x_n$ as
+$a\cos(2\pi n/4+\varphi)$ and check your answer against
+Proposition~\ref{prop:cosbin}.
+\end{exercise}
+
+\begin{exercise}[Proof, $\star$]\label{ex:edgebins}
+Redo Proposition~\ref{prop:cosbin} for $k=0$ and, when $N$ is even, for $k=N/2$. Show
+that the sum is $aN\cos\varphi$ in both cases, so at these two bins the score
+\emph{does} depend on the phase. What is special about $\cos(\pi n+\varphi)$?
+\end{exercise}
+
+% =====================================================================
+\section{The DFT Is a Change of Basis}\label{sec:dft}
+\usedin{\code{magnitude\_spectrum} (\code{fft.rfft}), and \code{np.fft} generally.
+Slide 7.}
+
+Take $N$ probes on a grid, one for each whole number of cycles per frame, and ask all
+$N$ questions at once. The answer is a matrix--vector product, and because the probes
+are orthogonal, nothing is lost: it is a change of basis.
+
+\subsection{Theory}
+
+\begin{definition}[Fourier vectors, DFT]
+For $k=0,\dots,N-1$, the \emph{Fourier vector} $e_k\in\C^N$ has entries
+$(e_k)_n=e^{2\pi ikn/N}$: it turns $k$ times around the unit circle across the
+frame. The \emph{discrete Fourier transform} of $x\in\C^N$ is $X\in\C^N$ with
+\[
+X_k=\ip{x}{e_k}=\sum_{n=0}^{N-1}x_n\,\omega^{kn},\qquad\omega=e^{-2\pi i/N}.
+\]
+Each $X_k$ is called a \emph{bin}. In matrix form $X=Fx$ with $F_{kn}=\omega^{kn}$; the
+rows of $F$ are the conjugates $\overline{e_k}^{\,\mathsf T}$.
+\end{definition}
+
+\begin{theorem}[Orthogonality of the Fourier vectors]\label{thm:orth}
+For $0\le j,k\le N-1$: $\ip{e_j}{e_k}=N$ if $j=k$, and $0$ otherwise.
+\end{theorem}
+\begin{proof}
+$\ip{e_j}{e_k}=\sum_ne^{2\pi ijn/N}e^{-2\pi ikn/N}=\sum_n\omega^{(k-j)n}$. By
+Lemma~\ref{lem:roots} this is $N$ if $N\mid(k-j)$ and $0$ otherwise. Since
+$\abs{k-j}<N$, $N\mid(k-j)$ only when $j=k$.
+\end{proof}
+
+\begin{corollary}[Unitary up to $N$; inversion; Parseval]\label{cor:unitary}
+$F^*F=FF^*=N\,I$, where $F^*=\overline F^{\mathsf T}$. Hence $F/\sqrt N$ is unitary,
+$F^{-1}=F^*/N$, and
+\[
+x=\frac1N\sum_{k=0}^{N-1}X_k\,e_k,\qquad\norm{X}^2=N\norm{x}^2.
+\]
+\end{corollary}
+\begin{proof}
+$(FF^*)_{jk}=\sum_nF_{jn}\overline{F_{kn}}=\sum_n\overline{(e_j)_n}(e_k)_n
+=\ip{e_k}{e_j}$, which is $N\delta_{jk}$ by Theorem~\ref{thm:orth}. So $FF^*=NI$; for
+square matrices a one-sided inverse is two-sided, so $F^*F=NI$ too. Then
+$F^{-1}=F^*/N$, and $x=F^{-1}X=\frac1NF^*X$ is the displayed sum because the columns
+of $F^*$ are the $e_k$. Finally $\norm{Fx}^2=(Fx)^*(Fx)=x^*F^*Fx=N\norm x^2$.
+\end{proof}
+
+So $X$ is just $x$ in new coordinates: the coefficients of $x$ along the orthogonal
+basis $e_0,\dots,e_{N-1}$, up to the factor $N$. This is the \emph{frequency domain};
+the \emph{Fourier transform} is the change of coordinates between the two domains.
+
+\begin{proposition}[Bins are frequencies]
+If $x_n=x(n/f_s)$, then $(e_k)_n=e^{2\pi i(kf_s/N)(n/f_s)}$ is the complex sinusoid of
+frequency $kf_s/N$ Hz, sampled at the same instants. So bin $k$ measures frequency
+$kf_s/N$, and neighbouring bins are $f_s/N$ Hz apart.
+\end{proposition}
+\begin{proof}
+$2\pi i(kf_s/N)(n/f_s)=2\pi ikn/N$.
+\end{proof}
+
+\subsection{Practice: by hand}
+
+\begin{example}[The $4\times4$ DFT]
+With $\omega=-i$,
+\[
+F=\begin{pmatrix}1&1&1&1\\1&-i&-1&i\\1&-1&1&-1\\1&i&-1&-i\end{pmatrix},\qquad
+F\begin{pmatrix}1\\2\\3\\4\end{pmatrix}=\begin{pmatrix}10\\-2+2i\\-2\\-2-2i\end{pmatrix}.
+\]
+Parseval: $\norm x^2=1+4+9+16=30$ and $\norm X^2=100+8+4+8=120=4\cdot30$. Inversion at
+$n=0$: $\frac14(10+(-2+2i)+(-2)+(-2-2i))=\frac44=1=x_0$.
+\end{example}
+
+\begin{example}[Two extremes]
+The impulse $(1,0,0,0)$ has DFT $(1,1,1,1)$: one instant contains every frequency
+equally. The constant $(1,1,1,1)$ has DFT $(4,0,0,0)$: all of it is in bin 0.
+\end{example}
+
+\begin{connection}
+\textbf{Code connection.} \code{np.fft.fft(x)} computes $Fx$; \code{np.fft.ifft(X)}
+computes $F^*X/N$, so NumPy puts the whole $1/N$ in the inverse;
+\code{np.fft.fft(x, norm="ortho")} computes the unitary $(F/\sqrt N)x$. In
+\code{magnitude\_spectrum} the transform length is $7{,}200$ at $f_s=44{,}100$, so
+bins are $44{,}100/7{,}200=6.125$ Hz apart.
+\end{connection}
+
+\subsection{Exercises}
+\begin{exercise}[Hand]\label{ex:dft4}
+Compute the DFT of $(1,0,-1,0)$ and of $(0,1,0,-1)$, and compare their magnitudes using
+Lesson~\ref{sec:complex}. Then invert $X=(0,2,0,2)$ with the formula of
+Corollary~\ref{cor:unitary} and confirm you get the first signal back.
+\end{exercise}
+
+\begin{exercise}[Proof]\label{ex:parseval}
+Prove $\ip{Fx}{Fy}=N\ip xy$ for all $x,y\in\C^N$, and deduce Parseval.
+\end{exercise}
+
+\begin{exercise}[Proof, $\star$]\label{ex:basis}
+Without using matrices, show that $e_0,\dots,e_{N-1}$ is a basis of $\C^N$: prove that
+pairwise orthogonal nonzero vectors are linearly independent (take the inner product of
+a vanishing combination with each $e_j$), then count.
+\end{exercise}
+
+% =====================================================================
+\section{Reading the DFT: Periodicity, Real Signals, \texttt{rfft}}\label{sec:layout}
+\usedin{\code{magnitude\_spectrum} (\code{fft.rfft} returns $3{,}601$ bins);
+\code{harmonic\_product} (the bound \code{n\_bins}). Slides 8 and 10.}
+
+The array \code{np.fft.fft} returns has a particular layout: zero frequency first,
+then positive frequencies, then \emph{negative} ones. This lesson explains every part
+of that layout from one fact: the DFT treats your $N$ samples as one period of an
+endless loop.
+
+\subsection{Theory}
+
+\begin{theorem}[The DFT sees a loop]\label{thm:periodic}
+Define $X_k=\sum_{n=0}^{N-1}x_n\omega^{kn}$ for \emph{every} integer $k$, and
+$\tilde x_n=\frac1N\sum_{k=0}^{N-1}X_k e^{2\pi ikn/N}$ for every integer $n$. Then
+\[
+X_{k+N}=X_k\quad\text{for all }k,\qquad
+\tilde x_n=x_n\ (0\le n<N),\qquad \tilde x_{n+N}=\tilde x_n\quad\text{for all }n.
+\]
+\end{theorem}
+\begin{proof}
+$\omega^{(k+N)n}=\omega^{kn}\omega^{Nn}=\omega^{kn}$ because $\omega^N=1$. The same
+argument applies to $e^{2\pi i(n+N)k/N}=e^{2\pi ikn/N}$. And $\tilde x_n=x_n$ for
+$0\le n<N$ is Corollary~\ref{cor:unitary}.
+\end{proof}
+
+The sequence $\tilde x$ is the \emph{periodic extension} of $x$: the frame tiled end to
+end. Any finite list can be tiled this way, so the DFT can always be applied, but it
+silently analyses the tiled signal, seams included (Lesson~\ref{sec:window}).
+
+Periodicity in $k$ is aliasing (Proposition~\ref{prop:alias}) in disguise: frequencies
+$k$ and $k+N$ cycles per frame give the same samples. In particular $X_{N-k}=X_{-k}$,
+so the upper half of the array holds the \emph{negative frequencies}.
+
+\begin{definition}[DC, positive, Nyquist, negative bins]
+Bin 0 is the \emph{zero frequency} or \emph{DC} bin: $X_0=\sum x_n$, which is $N$ times
+the mean. Bins $1,\dots,\lceil N/2\rceil-1$ are positive frequencies. If $N$ is even,
+bin $N/2$ is the \emph{Nyquist} bin, frequency $f_s/2$, whose Fourier vector
+$(e_{N/2})_n=(-1)^n$ is the fastest real oscillation the samples can hold. The
+remaining bins $k$ stand for the negative frequencies $k-N$. Odd $N$ has no Nyquist
+bin.
+\end{definition}
+
+\begin{theorem}[Real signals have conjugate-symmetric spectra]\label{thm:realsym}
+If $x\in\R^N$, then $X_{N-k}=\overline{X_k}$ for every $k$. In particular $X_0$ is real,
+and when $N$ is even, $X_{N/2}$ is real.
+\end{theorem}
+\begin{proof}
+$X_{N-k}=X_{-k}=\sum_nx_n\omega^{-kn}=\sum_n\overline{x_n\omega^{kn}}=\overline{X_k}$,
+using that $x_n$ is real and $\overline{\omega}=\omega^{-1}$. For $k=0$ this says
+$X_0=\overline{X_0}$; for $k=N/2$ it says $X_{N/2}=\overline{X_{N/2}}$.
+\end{proof}
+
+\begin{corollary}[Why \code{rfft} returns $\lfloor N/2\rfloor+1$ bins]\label{cor:rfft}
+For real $x$, the bins $X_0,\dots,X_{\lfloor N/2\rfloor}$ determine all of $X$, hence
+$x$. Counting real parameters: $X_0$ (1 real number), $X_{N/2}$ if $N$ is even
+(1 real number), and $2$ real numbers for each remaining bin, which totals exactly $N$.
+\end{corollary}
+\begin{proof}
+The other bins are conjugates of these by Theorem~\ref{thm:realsym}, and $x=F^{-1}X$.
+For even $N$: $1+1+2(N/2-1)=N$. For odd $N$: $1+2\cdot\frac{N-1}2=N$.
+\end{proof}
+
+\subsection{Practice: by hand}
+
+\begin{example}[The layout for $N=8$]
+Read the eight bins of \code{np.fft.fft} like this:
+\begin{center}
+\small
+\begin{tabular}{@{}lcccccccc@{}}
+\toprule
+bin $k$ & 0 & 1 & 2 & 3 & 4 & 5 & 6 & 7\\
+cycles per frame & 0 & $+1$ & $+2$ & $+3$ & $\pm4$ & $-3$ & $-2$ & $-1$\\
+meaning & DC & pos & pos & pos & Nyquist & neg & neg & neg\\
+\bottomrule
+\end{tabular}
+\end{center}
+\code{np.fft.fftfreq(8)} labels bin 4 as $-0.5$ (cycles per sample): by periodicity,
+$+4$ and $-4$ are the same bin. \code{np.fft.rfft} keeps bins 0--4.
+\end{example}
+
+\begin{example}[Symmetry in action]
+The DFT of $(1,2,3,4)$ was $(10,\,-2+2i,\,-2,\,-2-2i)$: $X_3=\overline{X_1}$, and
+$X_0$, $X_2$ are real.
+\end{example}
+
+\begin{example}[The project's numbers]
+Frames are zero-padded to $N=7{,}200$ (Lesson~\ref{sec:window}), so \code{rfft}
+returns $7{,}200/2+1=3{,}601$ bins, at $0,6.125,\dots,22{,}050$ Hz. A hummed D3
+($146.83$ Hz) lands near bin $146.83/6.125\approx23.97$.
+\end{example}
+
+\begin{connection}
+\textbf{Code connection.} \code{spectrum = np.abs(fft.rfft(frames * np.hanning(n),
+n=n\_fft, axis=-1))} keeps only the non-redundant half (Corollary~\ref{cor:rfft}),
+and the magnitudes $\abs{X_k}$, discarding phase. \code{harmonic\_product} uses
+$\code{n\_bins} = 3{,}601 /\!/ 3 = 1{,}200$, so that bin $3k$ exists for every
+candidate $k<1{,}200$.
+\end{connection}
+
+\subsection{Exercises}
+\begin{exercise}[Hand]\label{ex:layout7}
+(a) Make the layout table above for $N=7$. Which bin is the Nyquist bin, and how many
+bins does \code{rfft} return? (b) A real signal of length 4 has $X_0=10$, $X_1=-2+2i$,
+$X_2=-2$. Find $X_3$, then $x$.
+\end{exercise}
+
+\begin{exercise}[Hand]\label{ex:nyq}
+For $N=4$, compute the DFT of $x_n=\cos(\pi n+\varphi)$ for $\varphi=0$ and
+$\varphi=\pi/2$. Explain why the Nyquist bin cannot record phase (compare
+Exercise~\ref{ex:edgebins}).
+\end{exercise}
+
+\begin{exercise}[Proof, $\star$]\label{ex:realseries}
+Show that every real $x\in\R^N$, $N$ even, can be written as
+\[
+x_n=\frac{X_0}N+\sum_{k=1}^{N/2-1}\frac{2\abs{X_k}}N\cos\!\Big(\frac{2\pi kn}N+\arg X_k\Big)
++\frac{X_{N/2}}N(-1)^n.
+\]
+This is the real-world meaning of the bins: amplitude $2\abs{X_k}/N$ and phase
+$\arg X_k$.
+\end{exercise}
+
+% =====================================================================
+\section{Shifts, Circulants, and Convolution}\label{sec:circ}
+\usedin{the decision to keep only $\abs{X}$; the Hann window of
+Lesson~\ref{sec:window}. Slide 9.}
+
+Why sinusoids, and not some other orthogonal basis? Because sinusoids are the
+eigenvectors of \emph{shifting}. That one fact explains why the magnitude spectrum
+does not care where in the frame a note sits, and why multiplying by a window blurs
+the spectrum.
+
+\subsection{Theory}
+
+\begin{definition}[Cyclic shift, circulant, cyclic convolution]
+The \emph{cyclic shift} $S$ on $\C^N$ is $(Sx)_n=x_{n-1}$, indices mod $N$. A
+\emph{circulant} matrix $C$ has first column $c$ and each later column equal to the
+previous one shifted down cyclically: $C_{nj}=c_{n-j}$. The \emph{cyclic convolution}
+of $c$ and $x$ is $(c\cconv x)_n=\sum_{j=0}^{N-1}c_jx_{n-j}$.
+\end{definition}
+
+Note that $Cx=c\cconv x$ directly from $C_{nj}=c_{n-j}$ (substitute $j\mapsto n-j$),
+and $C=\sum_jc_jS^j$, since $S^j$ is the circulant with first column the $j$-th
+standard basis vector.
+
+\begin{lemma}[Fourier vectors are eigenvectors of the shift]\label{lem:shifteig}
+$Se_k=\omega^ke_k$ for every $k$.
+\end{lemma}
+\begin{proof}
+$(Se_k)_n=(e_k)_{n-1}=e^{2\pi ik(n-1)/N}=e^{-2\pi ik/N}e^{2\pi ikn/N}=\omega^k(e_k)_n$.
+(Indices mod $N$ are harmless because $e_k$ has period $N$.)
+\end{proof}
+
+\begin{theorem}[Shift theorem]\label{thm:shift}
+$(FS^mx)_k=\omega^{km}X_k$. Consequently $\abs{(FS^mx)_k}=\abs{X_k}$: a cyclic shift
+changes only phases, never magnitudes.
+\end{theorem}
+\begin{proof}
+$(FS^mx)_k=\ip{S^mx}{e_k}=\ip{x}{(S^*)^me_k}$. The shift is unitary with
+$S^*=S^{-1}$, and Lemma~\ref{lem:shifteig} gives $S^{-1}e_k=\omega^{-k}e_k$, so
+$(S^*)^me_k=\omega^{-km}e_k$. Conjugate-linearity in the second slot turns
+$\omega^{-km}$ into $\overline{\omega^{-km}}=\omega^{km}$, giving
+$\omega^{km}\ip{x}{e_k}$. Finally $\abs{\omega^{km}}=1$.
+\end{proof}
+
+\begin{theorem}[The DFT diagonalizes every circulant]\label{thm:diag}
+For the circulant $C$ with first column $c$, $Ce_k=(Fc)_k\,e_k$. Equivalently
+$FCF^{-1}=\diag(Fc)$, and
+\[
+F(c\cconv x)=(Fc)\odot(Fx)\qquad\text{(the convolution theorem),}
+\]
+where $\odot$ is the entrywise product.
+\end{theorem}
+\begin{proof}
+$Ce_k=\sum_jc_jS^je_k=\sum_jc_j\omega^{jk}e_k=(Fc)_ke_k$ by Lemma~\ref{lem:shifteig}.
+So the columns of $F^{-1}=F^*/N$, which are multiples of the $e_k$, are eigenvectors
+of $C$ with eigenvalues $(Fc)_k$; that is $CF^{-1}=F^{-1}\diag(Fc)$. Multiply on the
+left by $F$, then apply both sides to $Fx$:
+$F(c\cconv x)=FCx=\diag(Fc)Fx$.
+\end{proof}
+
+The dual statement swaps the roles of the two domains.
+
+\begin{theorem}[Products become convolutions]\label{thm:dual}
+For $x,y\in\C^N$, $F(x\odot y)=\frac1N(Fx)\cconv(Fy)$.
+\end{theorem}
+\begin{proof}
+Write $y_n=\frac1N\sum_jY_je^{2\pi ijn/N}$. Then
+\[
+(F(x\odot y))_k=\sum_nx_n\frac1N\sum_jY_je^{2\pi ijn/N}e^{-2\pi ikn/N}
+=\frac1N\sum_jY_j\sum_nx_n\omega^{(k-j)n}=\frac1N\sum_jY_jX_{k-j},
+\]
+using Theorem~\ref{thm:periodic} for the index $k-j$.
+\end{proof}
+
+\subsection{Practice: by hand}
+
+\begin{example}[Convolution theorem with $N=4$]
+Take $c=(1,1,0,0)$, so $(c\cconv x)_n=x_n+x_{n-1}$, and $x=(1,2,3,4)$. Then
+$c\cconv x=(5,3,5,7)$. On the other side, $Fc=(2,1-i,0,1+i)$ and
+$Fx=(10,-2+2i,-2,-2-2i)$, whose entrywise product is $(20,4i,0,-4i)$. Directly,
+$F(5,3,5,7)=(20,4i,0,-4i)$.
+\end{example}
+
+\begin{example}[A blur and its eigenvalues]
+The circulant with $c=(\frac12,\frac14,0,\frac14)$ replaces each entry by a weighted
+average with its neighbours. Its eigenvalues are
+$(Fc)_k=\frac12+\frac14\omega^k+\frac14\omega^{-k}=\frac12+\frac12\cos(2\pi k/4)$,
+that is $(1,\frac12,0,\frac12)$: slow oscillations pass, the fastest is erased. A blur
+is a low-pass filter.
+\end{example}
+
+\begin{connection}
+\textbf{Code connection.} Consecutive frames are 10 ms apart, so the same note sits at
+different positions in different frames. Theorem~\ref{thm:shift} is why
+\code{magnitude\_spectrum} keeps $\abs{X}$: position becomes phase, and phase is
+thrown away. (A real shift is not exactly cyclic, since samples enter and leave the
+frame, so this holds approximately; the window of Lesson~\ref{sec:window} keeps the
+approximation good.)
+\end{connection}
+
+\subsection{Exercises}
+\begin{exercise}[Hand]\label{ex:diff}
+Find the eigenvalues of the circulant with $c=(1,-1,0,0)$, that is $x_n-x_{n-1}$.
+Which frequency is erased, and which is amplified most?
+\end{exercise}
+
+\begin{exercise}[Proof]\label{ex:sunitary}
+Show that $S$ is unitary and $S^N=I$, and use Lemma~\ref{lem:shifteig} to deduce that
+its eigenvalues are exactly the $N$-th roots of unity.
+\end{exercise}
+
+\begin{exercise}[Proof, $\star$]\label{ex:commute}
+Show that a matrix $A$ commutes with $S$ if and only if $A$ is circulant. So
+``shift-invariant linear map'' and ``circulant'' are the same thing, and
+Theorem~\ref{thm:diag} diagonalizes all of them at once.
+\end{exercise}
+
+% =====================================================================
+\section{Leakage, Windows, and Zero-Padding}\label{sec:window}
+\usedin{\code{magnitude\_spectrum}: \code{frames * np.hanning(n)} and
+\code{n=n\_fft} with \code{zero\_pad=4}. Slides 11 and 14.}
+
+A hummed note almost never completes a whole number of cycles in a frame. Its
+periodic extension then has a jump at every seam, and its energy spreads over every
+bin. This lesson measures the spread exactly, shows how a window tames it, and shows
+what zero-padding does and does not do.
+
+\subsection{Theory}
+
+\begin{theorem}[Leakage]\label{thm:leak}
+Let $x_n=e^{2\pi i\alpha n/N}$ with $\alpha\in\R$. If $\alpha$ is an integer, $X$ is
+$N$ at bin $\alpha\bmod N$ and $0$ elsewhere. Otherwise, for every $k$,
+\[
+\abs{X_k}=\frac{\abs{\sin\pi(\alpha-k)}}{\abs{\sin\big(\pi(\alpha-k)/N\big)}}\ne0.
+\]
+\end{theorem}
+\begin{proof}
+$X_k=\sum_n r^n$ with $r=e^{2\pi i(\alpha-k)/N}$. If $\alpha$ is an integer this is
+Lemma~\ref{lem:roots}. Otherwise $r\ne1$, and
+$X_k=(1-r^N)/(1-r)=(1-e^{2\pi i(\alpha-k)})/(1-e^{2\pi i(\alpha-k)/N})$. Use
+$\abs{1-e^{i\theta}}=2\abs{\sin(\theta/2)}$ on the top and the bottom.
+\end{proof}
+
+For $\abs{\alpha-k}$ small compared with $N$, the denominator is about
+$\pi\abs{\alpha-k}/N$, so $\abs{X_k}\approx N\abs{\sin\pi(\alpha-k)}/(\pi\abs{\alpha-k})$:
+the leaked energy decays only like $1/\text{distance}$. That slow decay is what a
+window fixes.
+
+\begin{definition}[Window, Hann window]
+A \emph{window} is a vector $w$ that multiplies the frame entrywise before the DFT:
+$x\mapsto w\odot x=\diag(w)x$. The (periodic) \emph{Hann window} is
+$w_n=\frac12-\frac12\cos(2\pi n/N)$, a smooth bump that is 0 at $n=0$ and fades both
+ends of the loop, removing the jump at the seam.
+\end{definition}
+
+\begin{proposition}[The Hann window has three nonzero bins]\label{prop:hann}
+$\hat w=Fw$ is $N/2$ at bin 0, $-N/4$ at bins $1$ and $N-1$, and 0 elsewhere.
+\end{proposition}
+\begin{proof}
+$w=\frac12e_0-\frac14e_1-\frac14e_{N-1}$, since
+$\cos(2\pi n/N)=\frac12(e^{2\pi in/N}+e^{2\pi i(N-1)n/N})$. Apply $F$ and
+Theorem~\ref{thm:orth}: $Fe_j=N\cdot(\text{$j$-th standard basis vector})$.
+\end{proof}
+
+\begin{theorem}[Windowing is a three-tap blur of the spectrum]\label{thm:hannblur}
+With the Hann window,
+\[
+\big(F(w\odot x)\big)_k=\tfrac12X_k-\tfrac14X_{k-1}-\tfrac14X_{k+1}.
+\]
+\end{theorem}
+\begin{proof}
+By Theorem~\ref{thm:dual}, $F(w\odot x)=\frac1N\hat w\cconv X$, and by
+Proposition~\ref{prop:hann} only three terms of the convolution survive:
+$\frac1N(\frac N2X_k-\frac N4X_{k-1}-\frac N4X_{k+1})$.
+\end{proof}
+
+Why this helps: far from the peak, $1-e^{2\pi i(\alpha-k)/N}\approx-2\pi i(\alpha-k)/N$,
+so the leaked bins behave like $X_k\approx K/(\alpha-k)$ for a constant $K$, a slowly
+varying function of $k$. The three taps are a negative second difference,
+$\frac12X_k-\frac14(X_{k-1}+X_{k+1})=-\frac14\big(X_{k+1}-2X_k+X_{k-1}\big)$, and the
+second difference of $1/u$ is about $2/u^3$. So the tails fall like $1/\text{distance}^3$
+instead of $1/\text{distance}$: the highest sidelobe drops from about $-13$ dB to $-31$ dB
+below the peak (a decibel is $20\log_{10}$ of an amplitude ratio). The price is a peak
+twice as wide.
+
+\begin{definition}[Spectrum of a finite sequence]
+For $x\in\C^N$ and real $\nu$ (cycles per sample), let
+$\mathcal X(\nu)=\sum_{n=0}^{N-1}x_ne^{-2\pi i\nu n}$. This is a smooth, 1-periodic
+function of $\nu$ (its formal name is the discrete-time Fourier transform), and
+$X_k=\mathcal X(k/N)$.
+\end{definition}
+
+\begin{theorem}[Zero-padding samples the same curve more finely]\label{thm:zeropad}
+Append zeros to $x$ to length $M\ge N$ and take the $M$-point DFT. Its bins are
+$\mathcal X(k/M)$, $k=0,\dots,M-1$.
+\end{theorem}
+\begin{proof}
+The padded entries are 0, so $\sum_{n=0}^{M-1}x_ne^{-2\pi ikn/M}
+=\sum_{n=0}^{N-1}x_ne^{-2\pi i(k/M)n}=\mathcal X(k/M)$.
+\end{proof}
+
+So zero-padding adds no information; it evaluates the same curve $\mathcal X$ on a grid
+$M/N$ times finer. That is exactly what peak-finding needs (Lesson~\ref{sec:pitch}).
+
+\subsection{Practice: by hand}
+
+\begin{example}[Half a cycle too many]
+$N=4$, $\alpha=\frac12$. Theorem~\ref{thm:leak} gives
+\[
+\abs{X}=\Big(\frac1{\sin\frac\pi8},\frac1{\sin\frac\pi8},\frac1{\sin\frac{3\pi}8},
+\frac1{\sin\frac{3\pi}8}\Big)\approx(2.613,\,2.613,\,1.082,\,1.082).
+\]
+Every bin is nonzero. Parseval check: $2(6.828)+2(1.172)=16=N\norm x^2$.
+\end{example}
+
+\begin{example}[Hann on a bin-centred cosine]
+$N=8$ and $x_n=\cos(2\pi\cdot2n/8)$, so $X=(0,0,4,0,0,0,4,0)$. By
+Theorem~\ref{thm:hannblur},
+\[
+F(w\odot x)=(0,-1,2,-1,0,-1,2,-1):
+\]
+each spike becomes the three taps $-\frac14,\frac12,-\frac14$, times 4.
+\end{example}
+
+\begin{connection}
+\textbf{Code connection.} \code{magnitude\_spectrum} multiplies each 1{,}764-sample
+frame by \code{np.hanning(n)}, the \emph{symmetric} Hann window
+$\frac12-\frac12\cos(2\pi n/(N-1))$; at $N=1{,}764$ it is indistinguishable from the
+periodic one analysed here. It then calls \code{rfft(..., n=n\_fft)} with
+$n\_fft=7{,}200$ (from \code{next\_fast\_len(4 * 1764)}), which zero-pads by
+Theorem~\ref{thm:zeropad}: the grid goes from 25 Hz to 6.125 Hz.
+\end{connection}
+
+\subsection{Exercises}
+\begin{exercise}[Hand]\label{ex:hann4}
+Hann-window $x=(1,2,3,4)$ with $N=4$, so $w=(0,\frac12,1,\frac12)$. Compute
+$F(w\odot x)$ directly and check it against Theorem~\ref{thm:hannblur} using
+$X=(10,-2+2i,-2,-2-2i)$.
+\end{exercise}
+
+\begin{exercise}[Hand]\label{ex:leak8}
+For $N=8$ and $\alpha=2.5$, compute $\abs{X_2}$, $\abs{X_3}$ and $\abs{X_6}$ from
+Theorem~\ref{thm:leak}.
+\end{exercise}
+
+\begin{exercise}[Proof, $\star$]\label{ex:decay}
+Using $\sin y\ge 2y/\pi$ for $0\le y\le\pi/2$, show that
+$\abs{X_k}\le N/(2\abs{\alpha-k})$ whenever $0<\abs{\alpha-k}\le N/2$. This is the
+``decays like $1/\text{distance}$'' claim made precise.
+\end{exercise}
+
+% =====================================================================
+\section{The Fast Fourier Transform}\label{sec:fft}
+\usedin{\code{scipy.fft.rfft} inside \code{magnitude\_spectrum};
+\code{next\_fast\_len}. Slide 12.}
+
+$Fx$ costs $N^2$ multiply--adds done directly: about 52 million for $N=7{,}200$, a
+hundred times a second. The FFT computes the same vector in about $N\log_2N$
+operations by divide and conquer, exactly like merge sort.
+
+\subsection{Theory}
+
+\begin{theorem}[Radix-2 split]\label{thm:radix2}
+Let $N$ be even, and let $E$ and $O$ be the $N/2$-point DFTs of the even-indexed
+samples $(x_0,x_2,\dots)$ and the odd-indexed samples $(x_1,x_3,\dots)$. With
+$\omega_N=e^{-2\pi i/N}$, for $0\le k<N/2$:
+\[
+X_k=E_k+\omega_N^kO_k,\qquad X_{k+N/2}=E_k-\omega_N^kO_k.
+\]
+\end{theorem}
+\begin{proof}
+Split the sum by parity, $n=2r$ or $n=2r+1$:
+\[
+X_k=\sum_{r}x_{2r}\omega_N^{2rk}+\omega_N^k\sum_rx_{2r+1}\omega_N^{2rk}
+=E_k+\omega_N^kO_k,
+\]
+since $\omega_N^2=\omega_{N/2}$. Replacing $k$ by $k+N/2$: $E$ and $O$ have period
+$N/2$ (Theorem~\ref{thm:periodic}), and $\omega_N^{N/2}=e^{-\pi i}=-1$.
+\end{proof}
+
+Each pair $(E_k,O_k)\mapsto(X_k,X_{k+N/2})$ is a \emph{butterfly}: one multiplication
+by $\omega_N^k$, one addition, one subtraction.
+
+\begin{theorem}[Cost]\label{thm:fftcost}
+Let $T(N)$ count the additions and subtractions, so $T(1)=0$ and $T(N)=2T(N/2)+N$
+(two half-size transforms, then $N/2$ butterflies with one addition and one subtraction
+each). Then $T(2^p)=p\,2^p$, that is $T(N)=N\log_2N$. The multiplications by
+$\omega_N^k$ add $\frac N2\log_2N$ more.
+\end{theorem}
+\begin{proof}
+Induction on $p$. $T(1)=0=0\cdot1$. If $T(2^{p-1})=(p-1)2^{p-1}$ then
+$T(2^p)=2(p-1)2^{p-1}+2^p=p\,2^p$.
+\end{proof}
+
+In matrix language the split says
+$F_N=\begin{psmallmatrix}I&\Omega\\I&-\Omega\end{psmallmatrix}
+\begin{psmallmatrix}F_{N/2}&0\\0&F_{N/2}\end{psmallmatrix}P$, with $P$ the
+even/odd permutation and $\Omega=\diag(\omega_N^k)$: recursing factors $F$ into
+$\log_2N$ sparse matrices with two nonzeros per row.
+
+\subsection{Practice: by hand}
+
+\begin{example}[A 4-point FFT]
+For $x=(1,2,3,4)$: $E=\mathrm{DFT}_2(1,3)=(4,-2)$, $O=\mathrm{DFT}_2(2,4)=(6,-2)$,
+$\omega_4=-i$. Then $X_0=4+6=10$, $X_1=-2+(-i)(-2)=-2+2i$, $X_2=4-6=-2$,
+$X_3=-2-(-i)(-2)=-2-2i$: the same as Lesson~\ref{sec:dft}, with 8 additions and 2 multiplications
+instead of 16 multiply--adds.
+\end{example}
+
+\begin{connection}
+\textbf{Code connection.} The frames are padded to $7{,}200=2^5\cdot3^2\cdot5^2$, not a
+power of two: \code{next\_fast\_len(7056, real=True)} picks the smallest length
+$\ge7{,}056$ made only of 2s, 3s and 5s, because SciPy's FFT splits by 3 and 5 the same
+way it splits by 2 (Exercise~\ref{ex:radix3}). Cost per frame: about
+$7{,}200\log_27{,}200\approx92{,}000$ operations instead of $51{,}840{,}000$, about
+$560\times$ fewer.
+\end{connection}
+
+\subsection{Exercises}
+\begin{exercise}[Hand]\label{ex:fft4}
+(a) Run the 4-point FFT on $(1,0,-1,0)$ and compare with Lesson~\ref{sec:dft}.
+(b) Recursing the even/odd split three times for $N=8$ reorders the inputs. Show the
+order is $x_0,x_4,x_2,x_6,x_1,x_5,x_3,x_7$, and explain the name \emph{bit reversal}.
+\end{exercise}
+
+\begin{exercise}[Proof, $\star$]\label{ex:radix3}
+Let $3\mid N$ and let $A,B,C$ be the $N/3$-point DFTs of $x_{3r},x_{3r+1},x_{3r+2}$.
+Show $X_k=A_k+\omega_N^kB_k+\omega_N^{2k}C_k$ for all $k$ (indices of $A,B,C$ mod
+$N/3$), and deduce an $O(N\log N)$ cost when $N=3^p$.
+\end{exercise}
+
+% =====================================================================
+\section{From a Spectrum to a Pitch}\label{sec:pitch}
+\usedin{\code{harmonic\_product}, \code{track\_pitch} (the 10\% floor),
+\code{refine\_peaks}. Slides 13 and 14.}
+
+A hum's spectrum has a peak at every harmonic, and the tallest is often $2f_0$, an
+octave too high. This lesson proves that multiplying the spectrum by compressed copies
+of itself finds $f_0$, explains the guard needed for whistles, and derives the
+parabola that locates a peak between bins.
+
+\subsection{Theory}
+
+Write $M_k=\abs{X_k}$ for the magnitude spectrum.
+
+\begin{definition}[Harmonic product spectrum]
+$P[k]=M_k\,M_{2k}\,M_{3k}$, for candidate bins $k$ with $3k$ in range.
+\end{definition}
+
+To reason about it, use an idealized hum.
+
+\begin{definition}[Ideal harmonic spectrum]
+Fix a fundamental bin $k_0\ge1$, a number of harmonics $H\ge1$, amplitudes
+$a_1,\dots,a_H>0$ with $A=\max_ha_h$, and a noise level $\varepsilon\ge0$. Set
+$M_{hk_0}=a_h$ for $1\le h\le H$ (the \emph{harmonic bins}) and $M_k=\varepsilon$ for
+every other $k\ge1$.
+\end{definition}
+
+\begin{theorem}[The harmonic product finds the fundamental]\label{thm:hps}
+In the ideal harmonic spectrum, suppose $3\le H\le5$ and $\varepsilon A^2<a_1a_2a_3$.
+Then $k_0$ is the unique maximizer of $P[k]$ over $k\ge1$, even if the tallest peak is
+at another harmonic.
+\end{theorem}
+\begin{proof}
+$P[k_0]=a_1a_2a_3$. Let $k\ne k_0$. We show at most two of $k,2k,3k$ are harmonic
+bins, so $P[k]\le A\cdot A\cdot\varepsilon<a_1a_2a_3$.
+If $k_0\nmid k$, then $k$ itself is not a harmonic bin.
+If $k=rk_0$ with $r\ge2$, then $3k=3rk_0\ge6k_0>Hk_0$, so $3k$ is not a harmonic bin.
+\end{proof}
+
+\begin{remark}[Whistles and the floor]
+A whistle is nearly a pure sinusoid: $H=1$. Then $P[k_0]=a_1\varepsilon^2$, but also
+$P[k_0/2]=\varepsilon\cdot a_1\cdot\varepsilon$ when $k_0$ is even, a tie that noise
+breaks at random, so a subharmonic can win. The code therefore only lets a bin win if
+$M_k\ge\theta\max_jM_j$ with $\theta=0.1$. If $\varepsilon<\theta A$, the admissible
+bins are harmonic bins, and the subharmonics are excluded
+(Exercise~\ref{ex:floor}).
+\end{remark}
+
+The winning bin is an integer, but the true pitch lies between bins. Fit a parabola
+through the peak and its two neighbours.
+
+\begin{lemma}[Vertex of a three-point parabola]\label{lem:vertex}
+The parabola through $(-1,\alpha)$, $(0,\beta)$, $(1,\gamma)$ with
+$\alpha-2\beta+\gamma<0$ has its maximum at
+\[
+\delta=\frac12\cdot\frac{\alpha-\gamma}{\alpha-2\beta+\gamma}.
+\]
+If moreover $\beta\ge\alpha$ and $\beta\ge\gamma$, then $\abs\delta\le\frac12$.
+\end{lemma}
+\begin{proof}
+Write $p(u)=au^2+bu+c$. Then $c=\beta$, $a=\frac{\alpha-2\beta+\gamma}2<0$ and
+$b=\frac{\gamma-\alpha}2$, and the vertex is $-b/(2a)=\delta$. For the bound:
+$\abs{\alpha-\gamma}=\abs{(\beta-\gamma)-(\beta-\alpha)}\le(\beta-\alpha)+(\beta-\gamma)
+=\abs{\alpha-2\beta+\gamma}$.
+\end{proof}
+
+\begin{proposition}[Exact for Gaussian peaks]
+If $\log M$ near the peak is the parabola $-(u-u^\star)^2/(2\sigma^2)+\text{const}$ (a
+Gaussian peak), then applying Lemma~\ref{lem:vertex} to $\log M$ at bins $k-1,k,k+1$
+gives $k+\delta=u^\star$ exactly.
+\end{proposition}
+\begin{proof}
+A parabola through three of its own points is itself, so its vertex is $u^\star$.
+\end{proof}
+
+A Hann-windowed peak is close to a Gaussian, which is why the code interpolates on
+$\log$ magnitudes; zero-padding puts the three samples near the top, where the
+approximation is best.
+
+\subsection{Practice: by hand}
+
+\begin{example}[An octave error avoided]
+A low hum with a weak fundamental: $k_0=10$, $M_{10}=0.3$, $M_{20}=1$, $M_{30}=0.6$,
+$M_{40}=0.3$, and $\varepsilon=0.01$ elsewhere. The tallest bin is 20, an octave too
+high. But $P[10]=0.3\cdot1\cdot0.6=0.18$, $P[20]=1\cdot0.3\cdot0.01=0.003$ and
+$P[5]=0.01\cdot0.3\cdot0.01=0.00003$. The condition of Theorem~\ref{thm:hps} holds:
+$\varepsilon A^2=0.01<0.18$.
+\end{example}
+
+\begin{example}[Between bins]
+Log-magnitudes $\alpha=-2$, $\beta=-0.5$, $\gamma=-1$ at bins $23,24,25$ give
+$\delta=\frac12\cdot\frac{-1}{-2}=0.25$, so the peak is at bin $24.25$, that is
+$24.25\times6.125\approx148.5$ Hz.
+\end{example}
+
+\begin{connection}
+\textbf{Code connection.} \code{harmonic\_product} computes $P$ for all bins at once:
+\code{hps *= spectrum[..., : h * n\_bins : h]} reads bins $0,h,2h,\dots$, which is
+$M_{hk}$. \code{track\_pitch} zeroes candidates below
+\code{fundamental\_floor} $=0.1$ of the loudest bin before the \code{argmax}.
+\code{refine\_peaks} first climbs to the local maximum (so $\beta\ge\alpha,\gamma$ and
+$\abs\delta\le\frac12$), then applies Lemma~\ref{lem:vertex} to
+\code{np.log(spectrum + 1e-12)}.
+\end{connection}
+
+\subsection{Exercises}
+\begin{exercise}[Hand]\label{ex:hpshand}
+(a) A spectrum has $M_{12}=0.8$, $M_{24}=1$, $M_{36}=0.5$, $M_{48}=0.2$ and $0.02$
+elsewhere. Which bin is tallest? Compute $P[6]$, $P[12]$ and $P[24]$; which bin does
+the harmonic product choose? (b) Compute $\delta$ for
+$(\alpha,\beta,\gamma)=(-1,0,-3)$ and $(-0.2,0,-0.2)$, and interpret both.
+\end{exercise}
+
+\begin{exercise}[Proof]\label{ex:floor}
+In the ideal harmonic spectrum with $H\le2$, suppose $0<\varepsilon<\theta A$ and
+$a_1\ge\theta A$, and admit only bins with $M_k\ge\theta A$. Show that $k_0$ is the
+admissible maximizer of $P$. Why is $\varepsilon>0$ needed?
+\end{exercise}
+
+\begin{exercise}[Proof, $\star$]\label{ex:h6}
+Show that Theorem~\ref{thm:hps} fails for $H=6$: find a $k\ne k_0$ for which all three
+of $k,2k,3k$ are harmonic bins, and choose amplitudes that make $P[k]>P[k_0]$. What
+kind of voice would do this?
+\end{exercise}
+
+% =====================================================================
+\section{Notes in the Singer's Own Tuning}\label{sec:notes}
+\usedin{\code{hz\_to\_midi}, \code{estimate\_detune}, \code{segment\_notes},
+\code{analyze}. Slide 15.}
+
+We now have one pitch per frame, 100 a second. Turning them into notes means taking a
+logarithm and rounding, but people are rarely tuned to A440, and someone 45 cents
+sharp sits right on the rounding boundary. A circular mean finds their tuning.
+
+\subsection{Theory}
+
+\begin{definition}[MIDI value, cents]
+For a frequency $f>0$, $m(f)=69+12\log_2(f/440)$ is its (real) MIDI value; rounding
+gives the nearest note. A \emph{cent} is $1/100$ of a semitone, so $m$ measures pitch
+in units of 100 cents.
+\end{definition}
+
+\begin{proposition}[Logs turn ratios into differences]
+$m(2^{k/12}f)=m(f)+k$, and $m(f)-m(g)=12\log_2(f/g)$. In particular transposing a
+melody adds the same number to every note.
+\end{proposition}
+\begin{proof}
+$12\log_2(2^{k/12}f/440)=k+12\log_2(f/440)$; subtract the two definitions for the
+second identity.
+\end{proof}
+
+Only the fractional part of $m$ matters for tuning, and fractional parts live on a
+circle: $0.99$ is next to $0.01$, not $0.98$ away. So average them as points on the
+unit circle.
+
+\begin{definition}[Detune]
+For values $m_1,\dots,m_T$, let $z=\frac1T\sum_te^{2\pi im_t}$. If $z\ne0$, the
+\emph{detune} is $d=\frac1{2\pi}\arg z\in(-\frac12,\frac12]$.
+\end{definition}
+
+\begin{proposition}[Invariances]\label{prop:detuneinv}
+Adding integers $n_t$ to the $m_t$ does not change $d$. Adding the same real $c$ to
+every $m_t$ changes $d$ to $d+c$, modulo 1.
+\end{proposition}
+\begin{proof}
+$e^{2\pi i(m_t+n_t)}=e^{2\pi im_t}$. And $e^{2\pi i(m_t+c)}=e^{2\pi ic}e^{2\pi im_t}$,
+so $z$ is multiplied by $e^{2\pi ic}$ and its angle increases by $2\pi c$.
+\end{proof}
+
+\begin{theorem}[Tuning-corrected rounding recovers the notes]\label{thm:detune}
+Suppose $m_t=n_t+c+\varepsilon_t$ with integers $n_t$, a constant offset $c$, and
+per-frame wobble $\abs{\varepsilon_t}\le\eta<\frac14$. Then $d\equiv c+\rho\pmod1$ with
+$\abs\rho\le\eta$, and there is one integer $j$ with $\round(m_t-d)=n_t+j$ for every
+$t$.
+\end{theorem}
+\begin{proof}
+By Proposition~\ref{prop:detuneinv} we may drop the $n_t$ and rotate by $-c$: then $z$
+becomes $\frac1T\sum_te^{2\pi i\varepsilon_t}$, an average of unit vectors with angles in
+$[-2\pi\eta,2\pi\eta]\subset(-\frac\pi2,\frac\pi2)$. That sector is convex, so the average lies in it, and
+its real part is at least $\cos(2\pi\eta)>0$, so $z\ne0$ and its angle $2\pi\rho$
+satisfies $\abs\rho\le\eta$. Undoing the rotation, $d=c+\rho-j$ for some integer $j$
+(bringing $d$ into $(-\frac12,\frac12]$). Then
+$m_t-d=n_t+j+(\varepsilon_t-\rho)$ with $\abs{\varepsilon_t-\rho}\le2\eta<\frac12$, so it
+rounds to $n_t+j$.
+\end{proof}
+
+The common integer $j$ is harmless: it is a transposition, and the matcher of
+Lesson~\ref{sec:match} ignores those.
+
+Finally, frames become notes: a run of identical rounded values shorter than 80 ms
+(8 frames) is a slide between notes and is dropped, and a note equal to the previous
+one only counts as new if at least 30 ms (3 frames) of silence separates them.
+
+\subsection{Practice: by hand}
+
+\begin{example}[A sharp singer]
+Six frames hum B3 D4 A3 B3 D4 A3 (59, 62, 57, 59, 62, 57) about 45 cents sharp with a
+little wobble: $m=(59.40,62.48,57.53,59.44,62.37,57.47)$. Naive rounding gives
+$(59,62,\mathbf{58},59,62,57)$: the third note is wrong. The detune is
+$d\approx0.448$, and $\round(m-d)=(59,62,57,59,62,57)$: all correct.
+\end{example}
+
+\begin{example}[Why not an ordinary average]
+For $m=(60.95,62.05)$ the fractional parts are $0.95$ and $0.05$, whose arithmetic
+mean $0.5$ says ``half a semitone off''. On the circle they are $\pm0.05$ from 0, and
+the circular mean is $d=0$: in tune.
+\end{example}
+
+\begin{connection}
+\textbf{Code connection.} \code{hz\_to\_midi} is $m(f)$ with NaN for unpitched
+frames. \code{estimate\_detune} is literally
+\begin{lstlisting}
+np.angle(np.mean(np.exp(2j * np.pi * voiced))) / (2 * np.pi)
+\end{lstlisting}
+\code{analyze}
+rounds \code{m - detune}, and \code{segment\_notes} applies the 80 ms and 30 ms rules.
+The test suite hums every song 40 cents sharp to exercise Theorem~\ref{thm:detune}.
+\end{connection}
+
+\subsection{Exercises}
+\begin{exercise}[Hand]\label{ex:detunehand}
+(a) Find the MIDI value of 196 Hz and the distance in cents from 440 Hz to 446 Hz.
+(b) Compute the detune of $m=(60.1,61.9,64.05,59.95)$ and the naive and corrected
+roundings.
+\end{exercise}
+
+\begin{exercise}[Hand]\label{ex:segment}
+Apply the segmentation rules to these per-frame notes (one entry per 10 ms frame, $-$
+for silence): ten 62s, two 64s, nine 62s, three $-$, eight 62s. How many notes come
+out, and which?
+\end{exercise}
+
+\begin{exercise}[Proof, $\star$]\label{ex:eta}
+Show that the bound $\eta<\frac14$ in Theorem~\ref{thm:detune} cannot be raised to
+$\frac12$: give wobbles with $\abs{\varepsilon_t}<\frac12$ for which some note is
+rounded wrongly even after correction. Where does the proof break?
+\end{exercise}
+
+% =====================================================================
+\section{Matching in Any Key}\label{sec:match}
+\usedin{\code{rank\_songs}, \code{match\_song}, \code{DEFAULT\_TOLERANCE}. Slides 16
+and 17.}
+
+The last step compares the hummed notes with the twelve songs, ignoring key. It is
+geometry: all keys of a song form a line, and the error is the distance to that line,
+measured so that one wrong note cannot spoil it.
+
+\subsection{Theory}
+
+\begin{definition}[Key-invariant distance]
+A song is a vector $s\in\Z^L$ of note numbers, and humming it $c$ semitones away gives
+$s+c\one$, where $\one=(1,\dots,1)$. For a window $x\in\R^L$ of hummed notes,
+\[
+E(x,s)=\min_{c\in\R}\frac1L\norm{x-s-c\one}_1,
+\qquad\norm v_1=\sum_i\abs{v_i}.
+\]
+\end{definition}
+
+\begin{theorem}[The best shift is a median]\label{thm:median}
+Let $d=x-s$. Then $g(c)=\sum_i\abs{d_i-c}$ is minimized exactly at the medians of
+$d_1,\dots,d_L$ (for even $L$, every point between the two middle values).
+\end{theorem}
+\begin{proof}
+$g$ is continuous and piecewise linear. Away from the $d_i$, its slope is
+$\#\{i:d_i<c\}-\#\{i:d_i>c\}$, which increases with $c$ from $-L$ to $L$. It is
+negative while fewer than half the $d_i$ lie below $c$ and positive once more than half
+do, so $g$ decreases up to the median and increases after it.
+\end{proof}
+
+\begin{proposition}[The $L^2$ alternative]
+$\sum_i(d_i-c)^2$ is minimized at the mean $\bar d$, and the minimum is the squared
+distance from $d$ to the line $\R\one$ (orthogonal projection).
+\end{proposition}
+\begin{proof}
+The derivative $-2\sum_i(d_i-c)$ vanishes only at $c=\bar d$, and $\bar d\one$ is the
+projection $\frac{\ip d\one}{\ip\one\one}\one$.
+\end{proof}
+
+The difference matters: one wrong note drags the mean but not the median
+(Example~\ref{ex:wrong}).
+
+\begin{theorem}[A pseudometric on melodies]\label{thm:pseudo}
+$E$ is symmetric, $E(x,x+c\one)=0$, and $E(x,z)\le E(x,y)+E(y,z)$ for all
+$x,y,z\in\R^L$.
+\end{theorem}
+\begin{proof}
+Symmetry: substitute $c\mapsto-c$. For the triangle inequality, take minimizers $c_1$
+for $E(x,y)$ and $c_2$ for $E(y,z)$; then
+$\norm{x-z-(c_1+c_2)\one}_1\le\norm{x-y-c_1\one}_1+\norm{y-z-c_2\one}_1$, and
+$E(x,z)$ is at most the left side divided by $L$.
+\end{proof}
+
+\begin{corollary}[Separated songs cannot be confused]\label{cor:sep}
+If two songs of length $L$ satisfy $E(s,s')>2\tau$, no window $x\in\R^L$ is within
+$\tau$ of both.
+\end{corollary}
+\begin{proof}
+Otherwise $E(s,s')\le E(s,x)+E(x,s')\le2\tau$.
+\end{proof}
+
+\begin{remark}[The songbook]
+With tolerance $\tau=0.5$, Corollary~\ref{cor:sep} needs distances above 1. The nine
+6-note songs are at least $1.5$ apart (Epona's Song and Requiem of Spirit are the
+closest pair), so no 6-note window can match two of them. Across lengths, Requiem is
+$1.17$ from a 6-note stretch of Bolero of Fire, and the corollary does not apply. In
+fact exactly one hum is within tolerance of both: Bolero with its seventh note sung as
+F4 instead of A4, in any key, is exactly $0.5$ from Bolero (one note off by 4, over 8
+notes) and exactly $0.5$ from Requiem (its middle six notes have one note off by 3).
+The code breaks ties in favour of the longer song, so it reports Bolero, and a
+brute-force search over every hum within tolerance of any song finds no other
+ambiguity. Exercise~\ref{ex:mixed} shows why the triangle inequality could not rule
+this case out.
+\end{remark}
+
+\subsection{Practice: by hand}
+
+\begin{example}[Zelda's Lullaby, an octave down]
+$s=(71,74,69,71,74,69)$ and $x=s-12$: $d=(-12,\dots,-12)$, median $-12$, error 0. The
+matcher reports ``12.0 semitones below the ocarina''.
+\end{example}
+
+\begin{example}[One wrong note]\label{ex:wrong}
+Hum Zelda's Lullaby exactly but with the third note 2 semitones sharp:
+$d=(0,0,2,0,0,0)$. The median is 0 and $E=2/6\approx0.33\le0.5$: a match. With the
+mean $\frac13$ instead, the $L^1$ error would be
+$\frac16(5\cdot\frac13+\frac53)=\frac59\approx0.56>0.5$: rejected.
+\end{example}
+
+\begin{example}[Backwards is rejected]
+Reversed, Zelda's Lullaby is $(69,74,71,69,74,71)$: $d=(-2,0,2,-2,0,2)$, median 0,
+$E=8/6\approx1.33$. Same notes, wrong order, far from the line.
+\end{example}
+
+\begin{connection}
+\textbf{Code connection.} \code{rank\_songs} forms every window with
+\code{sliding\_window\_view(played, len(melody))}, takes \code{np.median} of the
+differences as the shift, and averages the absolute residuals: that is $E$, minimized
+over windows. \code{match\_song} accepts the best song if $E\le0.5$. The comment on
+\code{DEFAULT\_TOLERANCE} records what happens at looser settings: at 1.0, Epona's Song
+backwards is accepted as Saria's Song (Exercise~\ref{ex:epona}).
+\end{connection}
+
+\subsection{Exercises}
+\begin{exercise}[Hand]\label{ex:epona}
+Compute $E$ between (a) Epona's Song $(74,71,69,74,71,69)$ and Requiem of Spirit
+$(62,65,62,69,65,62)$; (b) Epona's Song reversed and Saria's Song
+$(65,69,71,65,69,71)$. Which tolerances accept (b)?
+\end{exercise}
+
+\begin{exercise}[Proof]\label{ex:onewrong}
+Suppose $x=s+c\one+\delta\,u_j$, where $u_j$ is the $j$-th standard basis vector: every
+note is exact up to the key shift $c$ except note $j$, which is off by $\delta$. Show
+that for $L\ge3$ the median shift is exactly $c$, and $E(x,s)=\abs\delta/L$.
+\end{exercise}
+
+\begin{exercise}[Proof, $\star$]\label{ex:mixed}
+Let $B\in\Z^8$ and let $B'$ be its notes 2--7. Show that if an 8-note window $w$ has
+$E(w,B)\le\tau$, then its notes 2--7, $w'$, satisfy $E(w',B')\le\frac43\tau$. Now
+suppose a hum contains such a $w$ and also $E(w',R)\le\tau$ for a 6-note song $R$.
+Deduce $E(R,B')\le\frac73\tau$, and compare with the Requiem--Bolero distance $1.17$ at
+$\tau=0.5$.
+\end{exercise}
+
+% =====================================================================
+\appendix
+\section{Hints and Answers}\label{app:hints}
+
+\paragraph{Lesson 1.} \ref{ex:missing}: $x(0)=2$, but
+$x(\frac1{2f_0})=\cos2\pi+\cos3\pi=0$ and $x(\frac1{3f_0})=\cos\frac{4\pi}3+\cos2\pi=\frac12$;
+$1/f_0$ is a period by Proposition~\ref{prop:harmperiod}.
+\ref{ex:alias}: $44{,}100-30{,}000=14{,}100$ Hz; $50{,}000-44{,}100=5{,}900$ Hz.
+\ref{ex:nyqinj}: take $n=1$; both angles $2\pi f/f_s$ and $2\pi g/f_s$ lie in
+$[0,\pi]$, where cosine is one-to-one.
+
+\paragraph{Lesson 2.} \ref{ex:sixth}: $1$, $\frac12-\frac{\sqrt3}2i$,
+$-\frac12-\frac{\sqrt3}2i$, $-1$, $-\frac12+\frac{\sqrt3}2i$, $\frac12+\frac{\sqrt3}2i$;
+the sum is the case $m=1$ and the sum of squares the case $m=2$ (neither divisible by
+6). \ref{ex:probe4}: $1\cdot1+1\cdot(-i)+(-1)(-1)+(-1)\cdot i=2-2i$; from
+$x_0=a\cos\varphi=1$ and $x_1=-a\sin\varphi=1$, $a=\sqrt2$ and $\varphi=-\pi/4$, and
+$\frac{aN}2e^{i\varphi}=2\sqrt2e^{-i\pi/4}=2-2i$. \ref{ex:edgebins}:
+$\cos(\pi n+\varphi)=(-1)^n\cos\varphi$, so the phase can only scale the samples.
+
+\paragraph{Lesson 3.} \ref{ex:dft4}: $(0,2,0,2)$ and $(0,-2i,0,2i)$: equal magnitudes,
+phases a quarter turn apart; the inverse of $(0,2,0,2)$ is
+$\frac14(2e_1+2e_3)=(1,0,-1,0)$. \ref{ex:parseval}: $\ip{Fx}{Fy}=y^*F^*Fx$.
+\ref{ex:basis}: if $\sum c_ke_k=0$, its inner product with $e_j$ is $Nc_j$; $N$
+independent vectors in an $N$-dimensional space form a basis.
+
+\paragraph{Lesson 4.} \ref{ex:layout7}: (a) bin 0 DC, bins 1--3 are $+1,+2,+3$, bins
+4--6 are $-3,-2,-1$; no Nyquist bin; \code{rfft} returns $7/\!/2+1=4$ bins. (b)
+$X_3=\overline{X_1}=-2-2i$ and $x=(1,2,3,4)$. \ref{ex:nyq}: $(0,0,4,0)$ for
+$\varphi=0$; all zeros for $\varphi=\pi/2$, because every sample of
+$\cos(\pi n+\pi/2)=-\sin(\pi n)$ is 0. \ref{ex:realseries}: in the inversion formula,
+pair bins $k$ and $N-k$: by Theorem~\ref{thm:realsym},
+$X_ke_k+X_{N-k}e_{N-k}=X_ke_k+\overline{X_ke_k}=2\operatorname{Re}(X_ke_k)$.
+
+\paragraph{Lesson 5.} \ref{ex:diff}: $(Fc)_k=1-\omega^k=(0,\,1+i,\,2,\,1-i)$: DC is
+erased and the Nyquist frequency doubled, a high-pass filter. \ref{ex:sunitary}: $S$
+permutes the standard basis; if $Se=\lambda e$ then $e=S^Ne=\lambda^Ne$.
+\ref{ex:commute}: if $AS=SA$, then column $j$ of $A$ is $Au_j=AS^ju_0=S^jAu_0$, the
+first column shifted $j$ times; conversely $C=\sum_jc_jS^j$ commutes with $S$.
+
+\paragraph{Lesson 6.} \ref{ex:hann4}: $w\odot x=(0,1,3,2)$ with DFT
+$(6,-3+i,0,-3-i)$; the formula gives $5-\frac14(-4)=6$,
+$(-1+i)-\frac14\cdot8=-3+i$, $-1-\frac14(-4)=0$, and $-3-i$.
+\ref{ex:leak8}: $\abs{X_2}=\abs{X_3}=1/\sin\frac\pi{16}\approx5.13$ and
+$\abs{X_6}=1/\sin\frac{7\pi}{16}\approx1.02$. \ref{ex:decay}: bound the numerator by
+1 and apply the inequality with $y=\pi\abs{\alpha-k}/N$.
+
+\paragraph{Lesson 7.} \ref{ex:fft4}: (a) $E=(0,2)$, $O=(0,0)$, so $X=(0,2,0,2)$.
+(b) write each index in 3-bit binary and reverse the bits: $1=001\mapsto100=4$,
+$3=011\mapsto110=6$, and so on. \ref{ex:radix3}: split $n=3r+j$ and use
+$\omega_N^3=\omega_{N/3}$; the cost satisfies $T(N)=3T(N/3)+O(N)$.
+
+\paragraph{Lesson 8.} \ref{ex:hpshand}: (a) the tallest bin is 24; $P[6]=0.00032$,
+$P[12]=0.4$, $P[24]=0.004$; it chooses 12. (b) $\delta=-0.25$, leaning toward the
+larger left neighbour; $\delta=0$, a symmetric peak. \ref{ex:floor}: the admissible
+bins are $k_0$ and possibly $2k_0$; $P[k_0]=a_1a_2\varepsilon$ beats
+$P[2k_0]=a_2\varepsilon^2$ exactly when $a_1>\varepsilon$; with $\varepsilon=0$ both
+are 0 and nothing is decided. \ref{ex:h6}: $k=2k_0$ makes $2k_0,4k_0,6k_0$ harmonic;
+$a_1=a_3=0.1$ and $a_2=a_4=a_6=1$ give $P[2k_0]=1>P[k_0]=0.01$: a voice with a weak
+fundamental and strong even harmonics.
+
+\paragraph{Lesson 9.} \ref{ex:detunehand}: (a) $69+12\log_2(196/440)\approx55.0$ (G3);
+$1200\log_2(446/440)\approx23.4$ cents. (b) the offsets $+0.1,-0.1,+0.05,-0.05$ are
+symmetric about 0, so $z$ is real and positive and $d=0$; both roundings give
+$(60,62,64,60)$. \ref{ex:segment}: two notes, 62 and 62. The two 64-frames are shorter
+than 8 frames and are dropped; the 62s on either side have no rest between them and
+merge; three frames of silence then separate a second 62. \ref{ex:eta}: with $c=0$, let
+one frame wobble by $+0.45$ and two by $-0.1$; then $d\approx-0.146$, and
+$0.45-d\approx0.60$ rounds up while $-0.1-d\approx0.05$ rounds down. The unit vectors
+no longer fit in a sector narrower than $\pi$, so their average can point outside it.
+
+\paragraph{Lesson 10.} \ref{ex:epona}: (a) $d=(12,6,7,5,6,7)$, median $6.5$, residual
+sum $9$, $E=1.5$. (b) $d=(4,2,3,4,2,3)$, median 3, $E=4/6\approx0.67$: accepted at
+tolerance $1.0$, rejected at $0.5$. \ref{ex:onewrong}: $x-s=c\one+\delta u_j$ has at
+least $L-1\ge2$ entries equal to $c$, more than half when $L\ge3$, so the median is
+$c$. \ref{ex:mixed}: keeping six of the eight residuals can only shrink their sum,
+which is at most $8\tau$; then
+$E(R,B')\le E(R,w')+E(w',B')\le\tau+\frac43\tau=\frac73\tau\approx1.167$ at
+$\tau=0.5$, exactly the Requiem--Bolero distance, so this argument cannot separate
+them. Nothing can: the hum in the Remark on the songbook sits at exactly $0.5$ from
+both songs.
+
+\end{document}
